@@ -1,16 +1,16 @@
 # coding: utf-8
 lib = File.expand_path('../lib', __FILE__)
 $LOAD_PATH.unshift(lib) unless $LOAD_PATH.include?(lib)
-require 'beanodex/version'
+require 'stalk_climber/version'
 
 Gem::Specification.new do |spec|
-  spec.name          = 'beanodex'
-  spec.version       = Beanodex::VERSION
+  spec.name          = 'stalk_climber'
+  spec.version       = StalkClimber::VERSION
   spec.authors       = ['Freewrite.org']
   spec.email         = ['dev@freewrite.org']
   spec.description   = %q{Improved sequential access to Beanstalk}
-  spec.summary       = %q{eanodex is a Ruby library allowing improved sequential access to Beanstalk via a job cache.}
-  spec.homepage      = 'https://github.com/freewrite/beanodex'
+  spec.summary       = %q{StalkClimber is a Ruby library allowing improved sequential access to Beanstalk via a job cache.}
+  spec.homepage      = 'https://github.com/freewrite/stalk_climber'
   spec.license       = 'MIT'
 
   spec.files         = `git ls-files`.split($/)

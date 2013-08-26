@@ -1,10 +1,10 @@
-# Beanodex
-[![Build Status](https://secure.travis-ci.org/freewrite/beanodex.png)](http://travis-ci.org/freewrite/beanodex)
-[![Dependency Status](https://gemnasium.com/freewrite/beanodex.png)](https://gemnasium.com/freewrite/beanodex)
-[![Coverage Status](https://coveralls.io/repos/freewrite/beanodex/badge.png?branch=master)](https://coveralls.io/r/freewrite/beanodex)
-[![Code Climate](https://codeclimate.com/github/freewrite/beanodex.png)](https://codeclimate.com/github/freewrite/beanodex)
+# StalkClimber
+[![Build Status](https://secure.travis-ci.org/freewrite/stalk_climber.png)](http://travis-ci.org/freewrite/stalk_climber)
+[![Dependency Status](https://gemnasium.com/freewrite/stalk_climber.png)](https://gemnasium.com/freewrite/stalk_climber)
+[![Coverage Status](https://coveralls.io/repos/freewrite/stalk_climber/badge.png?branch=master)](https://coveralls.io/r/freewrite/stalk_climber)
+[![Code Climate](https://codeclimate.com/github/freewrite/stalk_climber.png)](https://codeclimate.com/github/freewrite/stalk_climber)
 
-Beanodex is a Ruby library allowing improved sequential access to Beanstalk via a job cache.
+StalkClimber is a Ruby library allowing improved sequential access to Beanstalk via a job cache.
 
 ## Contributing
 
