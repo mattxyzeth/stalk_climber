@@ -141,10 +141,11 @@ class ConnectionTest < Test::Unit::TestCase
 
 
   def test_with_job_bang_does_not_execute_block_and_raises_error_if_job_does_not_exist
+    block = lambda {}
+    block.expects(:call).never
     assert_raise Beaneater::NotFoundError do
-      @connection.with_job!(@connection.max_job_id) do |job|
-        raise 'StalkClimber::Connnection#with_job! should not execute block for nonexistent job'
-      end
+      Object.any_instance.expects(:yield).never
+      @connection.with_job!(@connection.max_job_id, &block)
     end
   end
 

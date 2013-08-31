@@ -52,14 +52,14 @@ module StalkClimber
       begin
         with_job!(job_id, &block)
       rescue Beaneater::NotFoundError
-        yield(nil)
+        block.call(nil)
       end
     end
 
 
     def with_job!(job_id, &block)
       job = transmit("peek #{job_id}")
-      yield(job)
+      block.call(job)
     end
 
 
