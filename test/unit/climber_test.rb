@@ -4,12 +4,15 @@ class ClimberTest < Test::Unit::TestCase
 
   def test_climb_caches_jobs_for_later_use
     climber = StalkClimber::Climber.new do |c|
-      c.beanstalk_addresses = 'beanstalk://localhost'
+      c.beanstalk_addresses = BEANSTALK_ADDRESSES
     end
 
-    connection = climber.connection_pool.connections.first
-    job_ids = 5.times.to_a.map! do
-        connection.transmit(StalkClimber::Connection::PROBE_TRANSMISSION)[:id]
+    test_jobs = {}
+    climber.connection_pool.connections.each do |connection|
+      test_jobs[connection.address] = []
+      5.times.to_a.map! do
+          test_jobs[connection.address] << connection.transmit(StalkClimber::Connection::PROBE_TRANSMISSION)[:id]
+      end
     end
 
     jobs = {}
@@ -22,8 +25,11 @@ class ClimberTest < Test::Unit::TestCase
     climber.each do |job|
       assert_equal jobs[job[:connection].address][job[:id]], job
     end
-    job_ids.each do |job_id|
-      connection.transmit("delete #{job_id}")
+
+    climber.connection_pool.connections.each do |connection|
+      test_jobs[connection.address].each do |job_id|
+        connection.transmit("delete #{job_id}")
+      end
     end
   end
 

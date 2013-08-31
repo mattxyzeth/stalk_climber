@@ -8,3 +8,6 @@ require 'test/unit'
 require 'mocha/setup'
 
 require 'stalk_climber'
+
+BEANSTALK_ADDRESS = ENV['BEANSTALK_ADDRESS'] || 'beanstalk://localhost'
+BEANSTALK_ADDRESSES = ENV['BEANSTALK_ADDRESSES'] || BEANSTALK_ADDRESS
