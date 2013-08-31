@@ -1,5 +1,19 @@
 class ConnectionTest < Test::Unit::TestCase
 
+  def remove_jobs(*job_ids)
+    job_ids.flatten.each do |job_id|
+      @connection.transmit("delete #{job_id}")
+    end
+  end
+
+
+  def seed_jobs(count = 5)
+    count.times.map do
+      @connection.transmit(StalkClimber::Connection::PROBE_TRANSMISSION)[:id]
+    end
+  end
+
+
   def setup
     @connection = StalkClimber::Connection.new('localhost:11300')
   end
@@ -18,6 +32,8 @@ class ConnectionTest < Test::Unit::TestCase
 
 
   def test_each_caches_jobs_for_later_use
+    job_ids = seed_jobs
+
     jobs = {}
     @connection.each do |job|
       jobs[job[:id]] = job
@@ -27,15 +43,21 @@ class ConnectionTest < Test::Unit::TestCase
     @connection.each do |job|
       assert_equal jobs[job[:id]], job
     end
+
+    remove_jobs(job_ids)
   end
 
 
   def test_each_only_hits_each_job_once
+    job_ids = seed_jobs
+
     jobs = {}
     @connection.each do |job|
       refute jobs[job[:id]]
       jobs[job[:id]] = job
     end
+
+    remove_jobs(job_ids)
   end
 
 
@@ -49,21 +71,17 @@ class ConnectionTest < Test::Unit::TestCase
 
 
   def test_job_exists
-    probe = @connection.transmit(StalkClimber::Connection::PROBE_TRANSMISSION)
-    id = probe[:id].to_i
+    id = seed_jobs(1).first
     assert @connection.job_exists?(id)
 
-    @connection.transmit("delete #{id}")
+    remove_jobs(id)
     refute @connection.job_exists?(id)
   end
 
 
   def test_max_job_id_returns_expected_max_job_id
     initial_max = @connection.max_job_id
-    3.times do
-      probe = @connection.transmit(StalkClimber::Connection::PROBE_TRANSMISSION)
-      @connection.transmit("delete #{probe[:id]}")
-    end
+    remove_jobs(seed_jobs(3))
     # 3 new jobs, +1 for the probe job
     assert_equal initial_max + 4, @connection.max_job_id
   end
@@ -80,8 +98,7 @@ class ConnectionTest < Test::Unit::TestCase
   def test_max_job_id_should_not_increment_max_climbed_id_unless_successor
     @connection.each {}
     max = @connection.max_climbed_job_id
-    probe = @connection.transmit(StalkClimber::Connection::PROBE_TRANSMISSION)
-    @connection.transmit("delete #{probe[:id]}")
+    remove_jobs(seed_jobs(1))
     @connection.max_job_id
     assert_equal max, @connection.max_climbed_job_id
   end
@@ -114,12 +131,12 @@ class ConnectionTest < Test::Unit::TestCase
         assert_equal nil, job
       end
     end
-    probe = @connection.transmit(StalkClimber::Connection::PROBE_TRANSMISSION)
-    @connection.with_job(probe[:id]) do |job|
-      assert_equal probe[:id], job[:id]
-    end
 
-    @connection.transmit("delete #{probe[:id]}")
+    probe_id = seed_jobs(1).first
+    @connection.with_job(probe_id) do |job|
+      assert_equal probe_id, job[:id]
+    end
+    remove_jobs(probe_id)
   end
 
 
