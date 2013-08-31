@@ -7,6 +7,11 @@ class ClimberTest < Test::Unit::TestCase
       c.beanstalk_addresses = 'beanstalk://localhost'
     end
 
+    connection = climber.connection_pool.connections.first
+    job_ids = 5.times.to_a.map! do
+        connection.transmit(StalkClimber::Connection::PROBE_TRANSMISSION)[:id]
+    end
+
     jobs = {}
     climber.each do |job|
       jobs[job[:connection].address] ||= {}
@@ -16,6 +21,9 @@ class ClimberTest < Test::Unit::TestCase
     climber.expects(:with_job).never
     climber.each do |job|
       assert_equal jobs[job[:connection].address][job[:id]], job
+    end
+    job_ids.each do |job_id|
+      connection.transmit("delete #{job_id}")
     end
   end
 

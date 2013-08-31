@@ -92,7 +92,7 @@ module StalkClimber
         end
       end
 
-      (self.min_climbed_job_id - 1).downto(1) do |job_id|
+      ([self.min_climbed_job_id - 1, max_id].min).downto(1) do |job_id|
         cache_job_and_yield(job_id, &block)
       end
       return
