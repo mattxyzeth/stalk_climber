@@ -6,3 +6,5 @@ $LOAD_PATH.unshift(lib) unless $LOAD_PATH.include?(lib)
 
 require 'test/unit'
 require 'mocha/setup'
+
+require 'stalk_climber'
