@@ -15,4 +15,5 @@ before_install:
   - sudo chmod +x /etc/init.d/beanstalkd2
   - sudo service beanstalkd2 start
 
-script: BEANSTALK_ADDRESSES='beanstalk://localhost:11300,beanstalk://localhost:11301' bundle exec rake
+env:
+  - BEANSTALK_ADDRESSES='beanstalk://localhost:11300,beanstalk://localhost:11301'
