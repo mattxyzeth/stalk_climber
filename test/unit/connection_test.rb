@@ -26,6 +26,16 @@ class ConnectionTest < Test::Unit::TestCase
   end
 
 
+  def test_cache_is_reset_if_max_id_lower_than_max_climbed_id
+    remove_jobs(seed_jobs)
+    @connection.expects(:transmit).times(5).returns({:id => 1})
+    @connection.max_job_id
+    assert_equal({}, @connection.cache)
+    assert_equal(Float::INFINITY, @connection.min_climbed_job_id)
+    assert_equal(0, @connection.max_climbed_job_id)
+  end
+
+
   def test_connection_is_some_kind_of_enumerable
     assert @connection.kind_of?(Enumerable)
   end

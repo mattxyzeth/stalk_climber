@@ -14,11 +14,17 @@ module StalkClimber
     end
 
 
+    def clear_cache
+      @cache = nil
+      @min_climbed_job_id = Float::INFINITY
+      @max_climbed_job_id = 0
+    end
+
+
     def initialize(address)
       super
       self.test_tube = DEFAULT_TUBE
-      @min_climbed_job_id = Float::INFINITY
-      @max_climbed_job_id = 0
+      clear_cache
       yield(self) if block_given?
     end
 
@@ -43,7 +49,7 @@ module StalkClimber
       end
       id = transmit(PROBE_TRANSMISSION)[:id].to_i
       transmit("delete #{id}")
-      @max_climbed_job_id = id if @max_climbed_job_id == id - 1
+      update_climbed_job_ids_from_max_id(id)
       return id
     end
 
@@ -100,6 +106,16 @@ module StalkClimber
 
     alias_method :each, :climb
     public :each
+
+
+    def update_climbed_job_ids_from_max_id(new_max_id)
+      if @max_climbed_job_id > 0 && @max_climbed_job_id == new_max_id - 1
+        @max_climbed_job_id = new_max_id
+      elsif new_max_id < @max_climbed_job_id
+       # In case server reset since last climb
+        clear_cache
+      end
+    end
 
   end
 end
