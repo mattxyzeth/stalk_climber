@@ -11,25 +11,23 @@ class ClimberTest < Test::Unit::TestCase
     climber.connection_pool.connections.each do |connection|
       test_jobs[connection.address] = []
       5.times.to_a.map! do
-          test_jobs[connection.address] << connection.transmit(StalkClimber::Connection::PROBE_TRANSMISSION)[:id]
+          test_jobs[connection.address] << StalkClimber::Job.new(connection.transmit(StalkClimber::Connection::PROBE_TRANSMISSION))
       end
     end
 
     jobs = {}
     climber.each do |job|
-      jobs[job[:connection].address] ||= {}
-      jobs[job[:connection].address][job[:id]] = job
+      jobs[job.connection.address] ||= {}
+      jobs[job.connection.address][job.id] = job
     end
 
     climber.expects(:with_job).never
     climber.each do |job|
-      assert_equal jobs[job[:connection].address][job[:id]], job
+      assert_equal jobs[job.connection.address][job.id], job
     end
 
     climber.connection_pool.connections.each do |connection|
-      test_jobs[connection.address].each do |job_id|
-        connection.transmit("delete #{job_id}")
-      end
+      test_jobs[connection.address].map(&:delete)
     end
   end
 

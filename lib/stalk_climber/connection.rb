@@ -29,16 +29,6 @@ module StalkClimber
     end
 
 
-    def job_exists?(job_id)
-      begin
-        transmit("stats-job #{job_id}")
-        return true
-      rescue Beaneater::NotFoundError
-        return false
-      end
-    end
-
-
     def max_job_id
       [
         "use #{self.test_tube}",
@@ -47,10 +37,10 @@ module StalkClimber
       ].each do |transmission|
         transmit(transmission)
       end
-      id = transmit(PROBE_TRANSMISSION)[:id].to_i
-      transmit("delete #{id}")
-      update_climbed_job_ids_from_max_id(id)
-      return id
+      job = Job.new(transmit(PROBE_TRANSMISSION))
+      job.delete
+      update_climbed_job_ids_from_max_id(job.id)
+      return job.id
     end
 
 
@@ -64,7 +54,7 @@ module StalkClimber
 
 
     def with_job!(job_id, &block)
-      job = transmit("peek #{job_id}")
+      job = Job.new(transmit("peek #{job_id}"))
       block.call(job)
     end
 
@@ -84,17 +74,17 @@ module StalkClimber
     def climb(&block)
       max_id = max_job_id
 
-      initial_cached_job_ids = cache.keys.sort.reverse
+      initial_cached_jobs = cache.values_at(*cache.keys.sort.reverse)
 
       max_id.downto(self.max_climbed_job_id + 1) do |job_id|
         cache_job_and_yield(job_id, &block)
       end
 
-      initial_cached_job_ids.each do |job_id|
-        if job_exists?(job_id)
-          yield cache[job_id]
+      initial_cached_jobs.each do |job|
+        if job.exists?
+          yield job
         else
-          self.cache.delete(job_id)
+          self.cache.delete(job.id)
         end
       end
 

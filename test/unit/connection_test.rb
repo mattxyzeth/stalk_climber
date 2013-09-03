@@ -1,18 +1,6 @@
+require 'test_helper'
+
 class ConnectionTest < Test::Unit::TestCase
-
-  def remove_jobs(*job_ids)
-    job_ids.flatten.each do |job_id|
-      @connection.transmit("delete #{job_id}")
-    end
-  end
-
-
-  def seed_jobs(count = 5)
-    count.times.map do
-      @connection.transmit(StalkClimber::Connection::PROBE_TRANSMISSION)[:id]
-    end
-  end
-
 
   def setup
     @connection = StalkClimber::Connection.new('localhost:11300')
@@ -26,9 +14,14 @@ class ConnectionTest < Test::Unit::TestCase
   end
 
 
-  def test_cache_is_reset_if_max_id_lower_than_max_climbed_id
-    remove_jobs(seed_jobs)
-    @connection.expects(:transmit).times(5).returns({:id => 1})
+  def test_cache_is_reset_if_max_job_id_lower_than_max_climbed_job_id
+    seed_jobs.map(&:delete)
+    @connection.expects(:transmit).times(5).returns({
+      :body => {},
+      :connection => @connection,
+      :id => 1,
+      :status => 'INSERTED'
+    })
     @connection.max_job_id
     assert_equal({}, @connection.cache)
     assert_equal(Float::INFINITY, @connection.min_climbed_job_id)
@@ -42,32 +35,32 @@ class ConnectionTest < Test::Unit::TestCase
 
 
   def test_each_caches_jobs_for_later_use
-    job_ids = seed_jobs
+    seeds = seed_jobs
 
     jobs = {}
     @connection.each do |job|
-      jobs[job[:id]] = job
+      jobs[job.id] = job
     end
 
     @connection.expects(:with_job).never
     @connection.each do |job|
-      assert_equal jobs[job[:id]], job
+      assert_equal jobs[job.id], job
     end
 
-    remove_jobs(job_ids)
+    seeds.map(&:delete)
   end
 
 
   def test_each_only_hits_each_job_once
-    job_ids = seed_jobs
+    seeds = seed_jobs
 
     jobs = {}
     @connection.each do |job|
-      refute jobs[job[:id]]
-      jobs[job[:id]] = job
+      refute jobs[job.id]
+      jobs[job.id] = job
     end
 
-    remove_jobs(job_ids)
+    seeds.map(&:delete)
   end
 
 
@@ -80,18 +73,9 @@ class ConnectionTest < Test::Unit::TestCase
   end
 
 
-  def test_job_exists
-    id = seed_jobs(1).first
-    assert @connection.job_exists?(id)
-
-    remove_jobs(id)
-    refute @connection.job_exists?(id)
-  end
-
-
   def test_max_job_id_returns_expected_max_job_id
     initial_max = @connection.max_job_id
-    remove_jobs(seed_jobs(3))
+    seed_jobs(3).map(&:delete)
     # 3 new jobs, +1 for the probe job
     assert_equal initial_max + 4, @connection.max_job_id
   end
@@ -108,7 +92,7 @@ class ConnectionTest < Test::Unit::TestCase
   def test_max_job_id_should_not_increment_max_climbed_id_unless_successor
     @connection.each {}
     max = @connection.max_climbed_job_id
-    remove_jobs(seed_jobs(1))
+    seed_jobs(1).map(&:delete)
     @connection.max_job_id
     assert_equal max, @connection.max_climbed_job_id
   end
@@ -142,11 +126,11 @@ class ConnectionTest < Test::Unit::TestCase
       end
     end
 
-    probe_id = seed_jobs(1).first
-    @connection.with_job(probe_id) do |job|
-      assert_equal probe_id, job[:id]
+    probe = seed_jobs(1).first
+    @connection.with_job(probe.id) do |job|
+      assert_equal probe.id, job.id
     end
-    remove_jobs(probe_id)
+    probe.delete
   end
 
 
