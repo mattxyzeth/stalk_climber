@@ -157,7 +157,7 @@ class Job < Test::Unit::TestCase
     }
     @connection.expects(:transmit).twice.returns(stats_1, stats_2)
     job = StalkClimber::Job.new(@connection.transmit("stats-job #{@job.id}"))
-    job.stats(true)
+    job.stats(:force_refresh)
     StalkClimber::Job::STATS_ATTRIBUTES.each do |method_name|
       assert_equal body[method_name], job.send(method_name), "Expected #{body[method_name.to_sym]} for #{method_name}, got #{job.send(method_name)}"
     end

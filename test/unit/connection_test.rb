@@ -113,12 +113,9 @@ class ConnectionTest < Test::Unit::TestCase
   end
 
 
-  def test_each_is_an_alias_for_climb
-    assert_equal(
-      StalkClimber::Connection.instance_method(:climb),
-      StalkClimber::Connection.instance_method(:each),
-      'Expected StalkClimber::Connection#each to be an alias for StalkClimber::Connection#climb'
-    )
+  def test_each_calls_climb
+    @connection.expects(:climb)
+    @connection.each {}
   end
 
 
