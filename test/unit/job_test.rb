@@ -113,6 +113,13 @@ class Job < Test::Unit::TestCase
   end
 
 
+  def test_initialize_with_unknown_status_raises_error
+    assert_raise RuntimeError do
+      StalkClimber::Job.new({:status => 'DELETED'})
+    end
+  end
+
+
   def test_stats_attribute_method_can_force_refresh
     initial_value = @job.age
     @connection.expects(:transmit).returns({:body => {'age' => initial_value + 100}})
