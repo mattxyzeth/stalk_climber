@@ -79,6 +79,32 @@ class ConnectionTest < Test::Unit::TestCase
   end
 
 
+  def test_each_hits_jobs_below_climbed_range_that_have_not_been_hit
+    seeds = seed_jobs(10)
+
+    count = 0
+    @connection.each do |job|
+      count += 1
+      break if count == 5
+    end
+
+    initial_min_climbed_job_id = @connection.min_climbed_job_id
+
+    all_jobs = {}
+    @connection.each do |job|
+      all_jobs[job.id] = job
+    end
+
+    seeds.each do |job|
+      assert_equal all_jobs[job.id].body, job.body
+      assert_equal all_jobs[job.id].id, job.id
+      job.delete
+    end
+
+    assert @connection.min_climbed_job_id < initial_min_climbed_job_id
+  end
+
+
   def test_each_only_hits_each_job_once
     seeds = seed_jobs
 
