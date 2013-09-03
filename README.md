@@ -1,4 +1,5 @@
 # StalkClimber
+[![Gem Version](https://badge.fury.io/rb/stalk_climber.png)](http://badge.fury.io/rb/stalk_climber)
 [![Build Status](https://secure.travis-ci.org/freewrite/stalk_climber.png)](http://travis-ci.org/freewrite/stalk_climber)
 [![Dependency Status](https://gemnasium.com/freewrite/stalk_climber.png)](https://gemnasium.com/freewrite/stalk_climber)
 [![Coverage Status](https://coveralls.io/repos/freewrite/stalk_climber/badge.png?branch=master)](https://coveralls.io/r/freewrite/stalk_climber)
