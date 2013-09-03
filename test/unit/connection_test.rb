@@ -15,22 +15,17 @@ class ConnectionTest < Test::Unit::TestCase
 
 
   def test_cache_is_reset_if_max_job_id_lower_than_max_climbed_job_id
-    seed_jobs.map(&:delete)
+    seeds = seed_jobs
     @connection.each {}
     assert_not_equal({}, @connection.cache)
     assert_not_equal(Float::INFINITY, @connection.min_climbed_job_id)
     assert_not_equal(0, @connection.max_climbed_job_id)
 
-    @connection.expects(:transmit).times(5).returns({
-      :body => {},
-      :connection => @connection,
-      :id => 1,
-      :status => 'INSERTED'
-    })
-    @connection.max_job_id
+    @connection.send(:update_climbed_job_ids_from_max_id, 1)
     assert_equal({}, @connection.cache)
     assert_equal(Float::INFINITY, @connection.min_climbed_job_id)
     assert_equal(0, @connection.max_climbed_job_id)
+    seeds.map(&:delete)
   end
 
 
