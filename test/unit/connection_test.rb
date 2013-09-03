@@ -56,6 +56,29 @@ class ConnectionTest < Test::Unit::TestCase
   end
 
 
+  def test_each_deletes_cached_jobs_that_no_longer_exist
+    seeds = seed_jobs
+
+    jobs = {}
+    @connection.each do |job|
+      jobs[job.id] = job
+    end
+
+    deleted_job = jobs[jobs.keys[2]]
+    deleted_job.delete
+
+    @connection.expects(:with_job).never
+    @connection.each do |job|
+      assert_equal jobs.delete(job.id), job
+    end
+
+    assert_equal 1, jobs.length
+    assert_equal deleted_job.id, jobs.values.first.id
+
+    seeds.map(&:delete)
+  end
+
+
   def test_each_only_hits_each_job_once
     seeds = seed_jobs
 
