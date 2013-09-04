@@ -1,4 +1,5 @@
 require 'test_helper'
+require 'json'
 
 class Job < Test::Unit::TestCase
 
@@ -8,11 +9,11 @@ class Job < Test::Unit::TestCase
   end
 
 
-  def test_body_retrives_performs_peek
-    body = {:test => true}
+  def test_body_retrives_performs_peek_and_parses_json
+    body = {'test' => true}
 
     @job.connection.expects(:transmit).returns({
-      :body => body,
+      :body => body.to_json,
     })
     assert_equal body, @job.body
 
@@ -52,7 +53,7 @@ class Job < Test::Unit::TestCase
     assert_equal @connection, job.connection
     assert_equal @job.id, job.id
     assert_equal 'FOUND', job.instance_variable_get(:@status)
-    assert_equal '{}', job.body
+    assert_equal({}, job.body)
     refute job.instance_variable_get(:@stats)
   end
 
