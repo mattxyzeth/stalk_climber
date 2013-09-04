@@ -157,11 +157,27 @@ class ConnectionTest < Test::Unit::TestCase
   end
 
 
+  def test_initialize_with_a_test_tube
+    StalkClimber::Connection.any_instance.expects(:use_test_tube)
+    connection = StalkClimber::Connection.new('localhost:11300', 'test_tube')
+    assert_equal 'test_tube', connection.test_tube
+  end
+
+
   def test_test_tube_is_initialized_but_configurable
     assert_equal StalkClimber::Connection::DEFAULT_TUBE, @connection.test_tube
     tube_name = 'test_tube'
     @connection.test_tube = tube_name
     assert_equal tube_name, @connection.test_tube
+  end
+
+
+  def test_setting_test_tube_uses_test_tube
+    @connection.expects(:transmit).with('use test_tube')
+    @connection.expects(:transmit).with('watch test_tube')
+    @connection.expects(:transmit).with('ignore default')
+    @connection.test_tube = 'test_tube'
+    assert_equal 'test_tube', @connection.test_tube
   end
 
 

@@ -3,13 +3,14 @@ module StalkClimber
 
     class InvalidURIScheme < RuntimeError; end
 
-    attr_reader :addresses
+    attr_reader :addresses, :test_tube
 
     # Constructs a Beaneater::Pool from a less strict URL
     # +url+ can be a string i.e 'localhost:11300' or an array of addresses.
-    def initialize(addresses = nil)
+    def initialize(addresses = nil, test_tube = nil)
       @addresses = Array(parse_addresses(addresses) || host_from_env || Beaneater.configuration.beanstalkd_url)
-      @connections = @addresses.map { |address| Connection.new(address) }
+      @test_tube = test_tube
+      @connections = @addresses.map { |address| Connection.new(address, test_tube) }
     end
 
 

@@ -1,6 +1,6 @@
 module StalkClimber
   class Climber
-    include LazyEnumerable
+    include RUBY_VERSION >= '2.0.0' ? LazyEnumerable : Enumerable
 
     attr_accessor :beanstalk_addresses, :test_tube
     attr_reader :cache
@@ -11,7 +11,7 @@ module StalkClimber
       if self.beanstalk_addresses.nil?
         raise RuntimeError, 'beanstalk_addresses must be set in order to establish a connection'
       end
-      @connection_pool = ConnectionPool.new(self.beanstalk_addresses)
+      @connection_pool = ConnectionPool.new(self.beanstalk_addresses, self.test_tube)
     end
 
 
@@ -30,7 +30,9 @@ module StalkClimber
 
     # Creates a new Climber instance, optionally yielding the instance
     # if a block is given
-    def initialize
+    def initialize(beanstalk_addresses = nil, test_tube = nil)
+      self.beanstalk_addresses = beanstalk_addresses
+      self.test_tube = test_tube
       yield(self) if block_given?
     end
 

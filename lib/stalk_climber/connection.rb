@@ -5,8 +5,7 @@ module StalkClimber
     DEFAULT_TUBE = 'stalk_climber'
     PROBE_TRANSMISSION = "put 4294967295 0 300 2\r\n{}"
 
-    attr_accessor :test_tube
-    attr_reader :max_climbed_job_id, :min_climbed_job_id
+    attr_reader :max_climbed_job_id, :min_climbed_job_id, :test_tube
 
 
     # Returns or creates a Hash used for caching jobs by ID
@@ -40,18 +39,12 @@ module StalkClimber
     # all transmissions.
     # Optionally yields the instance if a block is given. The instance is yielded
     # prior to test_tube configuration to allow the test_tube to be configured.
-    def initialize(address)
-      super
-      self.test_tube = DEFAULT_TUBE
+    def initialize(address, test_tube = DEFAULT_TUBE)
+      super(address)
+      @test_tube = test_tube || DEFAULT_TUBE
       clear_cache
       yield(self) if block_given?
-      [
-        "use #{self.test_tube}",
-        "watch #{self.test_tube}",
-        'ignore default',
-      ].each do |transmission|
-        transmit(transmission)
-      end
+      use_test_tube
     end
 
 
@@ -65,6 +58,13 @@ module StalkClimber
       job.delete
       update_climbed_job_ids_from_max_id(job.id)
       return job.id
+    end
+
+
+    # Set and use the provided +test_tube+
+    def test_tube=(test_tube)
+      @test_tube = test_tube
+      use_test_tube
     end
 
 
@@ -136,6 +136,19 @@ module StalkClimber
         @max_climbed_job_id = new_max_id
       elsif new_max_id < @max_climbed_job_id
         clear_cache
+      end
+    end
+
+
+    # Dispatch transmissions notifying Beanstalk to use the configured test_tube for all
+    # commands from this connection and to ignore the default tube
+    def use_test_tube
+      [
+        "use #{self.test_tube}",
+        "watch #{self.test_tube}",
+        'ignore default',
+      ].each do |transmission|
+        transmit(transmission)
       end
     end
 
