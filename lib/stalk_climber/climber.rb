@@ -15,9 +15,21 @@ module StalkClimber
     end
 
 
-    # Perform a threaded climb across all connections in the connection pool.
+    # Climb over all jobs on all connections in the connection pool.
     # An instance of Job is yielded to +block+
     def climb(&block)
+      self.connection_pool.connections.each do |connection|
+        connection.each(&block)
+      end
+    end
+    alias_method :each, :climb
+
+
+    # Perform a threaded climb across all connections in the connection pool.
+    # This method cannot be used for enumerable enumeration because a break
+    # called from one of the threads will cause a LocalJumpError
+    # An instance of Job is yielded to +block+
+    def climb_threaded(&block)
       threads = []
       self.connection_pool.connections.each do |connection|
         threads << Thread.new { connection.each(&block) }
@@ -25,7 +37,7 @@ module StalkClimber
       threads.each(&:join)
       return
     end
-    alias_method :each, :climb
+    alias_method :each_threaded, :climb_threaded
 
 
     # Creates a new Climber instance, optionally yielding the instance

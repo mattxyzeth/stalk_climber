@@ -30,6 +30,35 @@ class ClimberTest < Test::Unit::TestCase
   end
 
 
+  def test_climb_threaded_works_for_non_break_situation
+    climber = StalkClimber::Climber.new(BEANSTALK_ADDRESSES)
+    test_jobs = {}
+    climber.connection_pool.connections.each do |connection|
+      test_jobs[connection.address] = []
+      5.times.to_a.map! do
+          test_jobs[connection.address] << StalkClimber::Job.new(connection.transmit(StalkClimber::Connection::PROBE_TRANSMISSION))
+      end
+    end
+
+    assert_raise LocalJumpError do
+      climber.each_threaded do |job|
+        break
+      end
+    end
+
+    assert_nothing_raised do
+      # test normal enumeration
+      climber.each_threaded do |job|
+        job
+      end
+    end
+
+    climber.connection_pool.connections.each do |connection|
+      test_jobs[connection.address].map(&:delete)
+    end
+  end
+
+
   def test_connection_pool_creates_a_connection_pool
     climber = StalkClimber::Climber.new('beanstalk://localhost')
     assert_kind_of StalkClimber::ConnectionPool, climber.connection_pool
@@ -44,11 +73,48 @@ class ClimberTest < Test::Unit::TestCase
   end
 
 
+  def test_enumerable_works_correctly
+    climber = StalkClimber::Climber.new(BEANSTALK_ADDRESSES)
+    test_jobs = {}
+    climber.connection_pool.connections.each do |connection|
+      test_jobs[connection.address] = []
+      5.times.to_a.map! do
+          test_jobs[connection.address] << StalkClimber::Job.new(connection.transmit(StalkClimber::Connection::PROBE_TRANSMISSION))
+      end
+    end
+
+    assert_nothing_raised do
+      # verify enumeration can be short circuited
+      climber.any? do |job|
+        true
+      end
+
+      # test normal enumeration
+      climber.all? do |job|
+        job
+      end
+    end
+
+    climber.connection_pool.connections.each do |connection|
+      test_jobs[connection.address].map(&:delete)
+    end
+  end
+
+
   def test_each_is_an_alias_for_climb
     assert_equal(
       StalkClimber::Climber.instance_method(:climb),
       StalkClimber::Climber.instance_method(:each),
       'Expected StalkClimber::Climber#each to be an alias for StalkClimber::Climber#climb'
+    )
+  end
+
+
+  def test_each_threaded_is_an_alias_for_climb_threaded
+    assert_equal(
+      StalkClimber::Climber.instance_method(:climb_threaded),
+      StalkClimber::Climber.instance_method(:each_threaded),
+      'Expected StalkClimber::Climber#each_threaded to be an alias for StalkClimber::Climber#climb_threaded'
     )
   end
 
