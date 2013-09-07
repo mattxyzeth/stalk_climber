@@ -119,6 +119,15 @@ class ClimberTest < Test::Unit::TestCase
   end
 
 
+  def test_max_job_ids_returns_the_correct_max_job_ids
+    climber = StalkClimber::Climber.new(BEANSTALK_ADDRESSES, 'test_tube')
+    max_ids = climber.max_job_ids
+    max_ids.each do |connection, max_id|
+      assert_equal connection.max_job_id - 1, max_id
+    end
+  end
+
+
   def test_to_enum_returns_an_enumerator
     assert_kind_of Enumerator, StalkClimber::Climber.new(BEANSTALK_ADDRESSES).to_enum
   end

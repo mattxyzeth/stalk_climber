@@ -57,6 +57,16 @@ module StalkClimber
       yield(self) if block_given?
     end
 
+
+    # Returns a hash with connections as keys and max_job_ids as values
+    def max_job_ids
+      connection_pairs = connection_pool.connections.map do |connection|
+        [connection, connection.max_job_id]
+      end
+      return Hash[connection_pairs]
+    end
+
+
     # Returns an Enumerator for enumerating jobs on all connections.
     # Connections are enumerated in the order defined. See Connection#to_enum
     # for more information
