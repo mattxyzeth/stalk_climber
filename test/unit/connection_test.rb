@@ -132,6 +132,56 @@ class ConnectionTest < Test::Unit::TestCase
   end
 
 
+  def test_fetch_job_returns_nil_or_the_requested_job_if_it_exists
+    assert_nothing_raised do
+      job = @connection.fetch_job(@connection.max_job_id)
+      assert_equal nil, job
+    end
+
+    probe = seed_jobs(1).first
+    assert_equal probe.id, @connection.fetch_job(probe.id).id
+    probe.delete
+  end
+
+
+  def test_fetch_job_bang_returns_requested_job_or_raises_an_error_if_job_does_not_exist
+    assert_raise Beaneater::NotFoundError do
+      @connection.fetch_job!(@connection.max_job_id)
+    end
+
+    probe = seed_jobs(1).first
+    assert_equal probe.id, @connection.fetch_job!(probe.id).id
+    probe.delete
+  end
+
+
+  def test_fetch_jobs_returns_each_requested_job_or_nil
+    assert_nothing_raised do
+      jobs = @connection.fetch_jobs(@connection.max_job_id, @connection.max_job_id)
+      assert_equal [nil, nil], jobs
+    end
+
+    probes = seed_jobs(2)
+    probe_ids = probes.map(&:id)
+    assert_equal probe_ids, @connection.fetch_jobs(probe_ids).map(&:id)
+    probes.map(&:delete)
+  end
+
+
+  def test_fetch_jobs_bang_returns_requested_jobs_or_raises_an_error_if_any_job_does_not_exist
+    probes = seed_jobs(2)
+
+    probe_ids = probes.map(&:id)
+    assert_equal probe_ids, @connection.fetch_jobs!(probe_ids).map(&:id)
+
+    assert_raise Beaneater::NotFoundError do
+      @connection.fetch_jobs!(probe_ids.first, @connection.max_job_id, probe_ids.last)
+    end
+
+    probes.map(&:delete)
+  end
+
+
   def test_max_job_id_returns_expected_max_job_id
     initial_max = @connection.max_job_id
     seed_jobs(3).map(&:delete)
@@ -194,29 +244,8 @@ class ConnectionTest < Test::Unit::TestCase
   end
 
 
-  def test_fetch_job_returns_nil_or_the_requested_job_if_it_exists
-    assert_nothing_raised do
-      job = @connection.fetch_job(@connection.max_job_id)
-      assert_equal nil, job
-    end
-
-    probe = seed_jobs(1).first
-    assert_equal probe.id, @connection.fetch_job(probe.id).id
-    probe.delete
-  end
-
-
   def test_to_enum_returns_an_enumerator
     assert_kind_of Enumerator, @connection.to_enum
-  end
-
-
-  def test_with_job_bang_does_not_execute_block_and_raises_error_if_job_does_not_exist
-    block = lambda {}
-    block.expects(:call).never
-    assert_raise Beaneater::NotFoundError do
-      @connection.fetch_job!(@connection.max_job_id)
-    end
   end
 
 end

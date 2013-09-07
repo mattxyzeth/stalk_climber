@@ -55,10 +55,24 @@ module StalkClimber
     end
 
 
-    # Returns a Job instance for the specified +job_id+.
-    # If the job does not exist, a Beaneater::NotFoundError will bubble up from Beaneater.
+    # Returns a Job instance for the specified +job_id+. If the job does not exist,
+    # a Beaneater::NotFoundError will bubble up from Beaneater. The job is not cached.
     def fetch_job!(job_id)
       return Job.new(transmit("peek #{job_id}"))
+    end
+
+
+    # Like fetch_job, but fetches all job ids in +job_ids+. Jobs are not cached and
+    # nil is returned if any of the jobs don't exist.
+    def fetch_jobs(*job_ids)
+      return job_ids.flatten.map { |job_id| fetch_job(job_id) }
+    end
+
+
+    # Similar to fetch_job!, but fetches all job ids in +job_ids+. Jobs are not cached
+    # and a Beaneater::NotFoundError is raised if any of the listed jobs don't exist.
+    def fetch_jobs!(*job_ids)
+      return job_ids.flatten.map { |job_id| fetch_job!(job_id) }
     end
 
 
