@@ -34,6 +34,19 @@ class ConnectionTest < Test::Unit::TestCase
   end
 
 
+  def test_deleted_jobs_should_not_be_enumerated
+    seeds = seed_jobs
+    seeds.map(&:delete)
+    seed_ids = seeds.map(&:id)
+
+    deleted = @connection.detect do |job|
+      seed_ids.include?(job.id)
+    end
+
+    assert_nil deleted, "Deleted job found in enumeration: #{deleted}"
+  end
+
+
   def test_each_caches_jobs_for_later_use
     seeds = seed_jobs
 

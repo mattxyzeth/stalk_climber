@@ -28,6 +28,7 @@ module StalkClimber
     # Deletes the job from beanstalk. If the job is not found it is assumed that it
     # has already been otherwise deleted.
     def delete
+      return true if @status == 'DELETED'
       begin
         @connection.transmit("delete #{id}")
       rescue Beaneater::NotFoundError
@@ -45,6 +46,7 @@ module StalkClimber
     # the job, the peek command could return a much larger response. Rather than waste
     # the trip to the server, stats are updated each time the method is called.
     def exists?
+      return false if @status == 'DELETED'
       begin
         stats(:force_refresh)
         return true
