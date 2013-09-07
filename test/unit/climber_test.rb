@@ -2,7 +2,7 @@ require 'test_helper'
 
 class ClimberTest < Test::Unit::TestCase
 
-  def test_climb_caches_jobs_for_later_use
+  def test_each_caches_jobs_for_later_use
     climber = StalkClimber::Climber.new(BEANSTALK_ADDRESSES)
 
     test_jobs = {}
@@ -30,7 +30,7 @@ class ClimberTest < Test::Unit::TestCase
   end
 
 
-  def test_climb_threaded_works_for_non_break_situation
+  def test_each_threaded_works_for_non_break_situation
     climber = StalkClimber::Climber.new(BEANSTALK_ADDRESSES)
     test_jobs = {}
     climber.connection_pool.connections.each do |connection|
@@ -116,6 +116,11 @@ class ClimberTest < Test::Unit::TestCase
       StalkClimber::Climber.instance_method(:each_threaded),
       'Expected StalkClimber::Climber#each_threaded to be an alias for StalkClimber::Climber#climb_threaded'
     )
+  end
+
+
+  def test_to_enum_returns_an_enumerator
+    assert_kind_of Enumerator, StalkClimber::Climber.new(BEANSTALK_ADDRESSES).to_enum
   end
 
 

@@ -113,8 +113,8 @@ class ConnectionTest < Test::Unit::TestCase
   end
 
 
-  def test_each_calls_climb
-    @connection.expects(:climb)
+  def test_each_calls_to_enum
+    @connection.expects(:to_enum).returns(Enumerator.new { |yielder| yielder << 1 })
     @connection.each {}
   end
 
@@ -181,18 +181,20 @@ class ConnectionTest < Test::Unit::TestCase
   end
 
 
-  def test_with_job_yields_nil_or_the_requested_job_if_it_exists
+  def test_fetch_job_returns_nil_or_the_requested_job_if_it_exists
     assert_nothing_raised do
-      @connection.with_job(@connection.max_job_id) do |job|
-        assert_equal nil, job
-      end
+      job = @connection.fetch_job(@connection.max_job_id)
+      assert_equal nil, job
     end
 
     probe = seed_jobs(1).first
-    @connection.with_job(probe.id) do |job|
-      assert_equal probe.id, job.id
-    end
+    assert_equal probe.id, @connection.fetch_job(probe.id).id
     probe.delete
+  end
+
+
+  def test_to_enum_returns_an_enumerator
+    assert_kind_of Enumerator, @connection.to_enum
   end
 
 
@@ -200,8 +202,7 @@ class ConnectionTest < Test::Unit::TestCase
     block = lambda {}
     block.expects(:call).never
     assert_raise Beaneater::NotFoundError do
-      Object.any_instance.expects(:yield).never
-      @connection.with_job!(@connection.max_job_id, &block)
+      @connection.fetch_job!(@connection.max_job_id)
     end
   end
 

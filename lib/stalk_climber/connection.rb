@@ -1,6 +1,6 @@
 module StalkClimber
   class Connection < Beaneater::Connection
-    include LazyEnumerable
+    include RUBY_VERSION >= '2.0.0' ? LazyEnumerable : Enumerable
 
     DEFAULT_TUBE = 'stalk_climber'
     PROBE_TRANSMISSION = "put 4294967295 0 300 2\r\n{}"
@@ -22,15 +22,43 @@ module StalkClimber
     end
 
 
-    # Handles job enumeration in descending ID order, passing an instance of Job to +block+ for
-    # each existing job on the beanstalk server. Jobs are enumerated in three phases. Jobs between
-    # max_job_id and the max_climbed_job_id are pulled from beanstalk, cached, and given to
-    # +block+. Jobs that have already been cached are yielded to +block+ if they still exist,
-    # otherwise they are deleted from the cache. Finally, jobs between min_climbed_job_id and 1
-    # are pulled from beanstalk, cached, and given to +block+.
+    # Interface for job enumerator/enumeration in descending ID order. Returns an instance of
+    # Job for each existing job on the beanstalk server. Jobs are enumerated in three phases. Jobs
+    # between max_job_id and the max_climbed_job_id are pulled from beanstalk, cached, and yielded.
+    # Jobs that have already been cached are yielded if they still exist, otherwise they are deleted
+    # from the cache. Finally, jobs between min_climbed_job_id and 1 are pulled from beanstalk, cached,
+    # and yielded.
     # Connection#each fulfills Enumberable contract, allowing connection to behave as an Enumerable.
-    def each(&block)
-      climb(&block)
+    def climb
+      enum = to_enum
+      return enum unless block_given?
+      loop do
+        begin
+          yield enum.next
+        rescue StopIteration
+          return ($ERROR_INFO.nil? || $ERROR_INFO.result.nil?) ? nil : $ERROR_INFO.result
+        end
+      end
+    end
+    alias_method :each, :climb
+
+
+    # Safe form of fetch_job!, returns a Job instance for the specified +job_id+.
+    # If the job does not exist, the error is caught and nil is passed returned instead.
+    def fetch_job(job_id)
+      begin
+        job = fetch_job!(job_id)
+      rescue Beaneater::NotFoundError
+        job = nil
+      end
+      return job
+    end
+
+
+    # Returns a Job instance for the specified +job_id+.
+    # If the job does not exist, a Beaneater::NotFoundError will bubble up from Beaneater.
+    def fetch_job!(job_id)
+      return Job.new(transmit("peek #{job_id}"))
     end
 
 
@@ -68,63 +96,47 @@ module StalkClimber
     end
 
 
-    # Safe form of with_job!, yields a Job instance to +block+ for the specified +job_id+.
-    # If the job does not exist, the error is caught and nil is passed to +block+ instead.
-    def with_job(job_id, &block)
-      begin
-        with_job!(job_id, &block)
-      rescue Beaneater::NotFoundError
-        block.call(nil)
+    # Returns an Enumerator for crawling all existing jobs for a connection.
+    # See Connection#each for more information.
+    def to_enum
+      return Enumerator.new do |yielder|
+        max_id = max_job_id
+
+        initial_cached_jobs = cache.values_at(*cache.keys.sort.reverse)
+
+        max_id.downto(self.max_climbed_job_id + 1) do |job_id|
+          job = fetch_and_cache_job(job_id)
+          yielder << job unless job.nil?
+        end
+
+        initial_cached_jobs.each do |job|
+          if job.exists?
+            yielder << job
+          else
+            self.cache.delete(job.id)
+          end
+        end
+
+        ([self.min_climbed_job_id - 1, max_id].min).downto(1) do |job_id|
+          job = fetch_and_cache_job(job_id)
+          yielder << job unless job.nil?
+        end
       end
-    end
-
-
-    # Yields a Job instance to +block+ for the specified +job_id+.
-    # If the job does not exist, a Beaneater::NotFoundError will bubble up from Beaneater.
-    def with_job!(job_id, &block)
-      job = Job.new(transmit("peek #{job_id}"))
-      block.call(job)
     end
 
 
     protected
 
-    # Helper method, similar to with_job, that retrieves the job identified by
-    # +job_id+, caches it, and  updates counters before yielding the job.
-    # If the job does not exist, +block+ is not called and nothing is cached,
-    # however counters will be updated.
-    def cache_job_and_yield(job_id, &block)
-      with_job(job_id) do |job|
-        self.cache[job_id] = job unless job.nil?
-        @min_climbed_job_id = job_id if job_id < @min_climbed_job_id
-        @max_climbed_job_id = job_id if job_id > @max_climbed_job_id
-        yield(job) unless job.nil?
-      end
-    end
-
-
-    # Handles job enumeration. See Connection#each for more information.
-    def climb(&block)
-      max_id = max_job_id
-
-      initial_cached_jobs = cache.values_at(*cache.keys.sort.reverse)
-
-      max_id.downto(self.max_climbed_job_id + 1) do |job_id|
-        cache_job_and_yield(job_id, &block)
-      end
-
-      initial_cached_jobs.each do |job|
-        if job.exists?
-          yield job
-        else
-          self.cache.delete(job.id)
-        end
-      end
-
-      ([self.min_climbed_job_id - 1, max_id].min).downto(1) do |job_id|
-        cache_job_and_yield(job_id, &block)
-      end
-      return
+    # Helper method, similar to fetch_job, that retrieves the job identified by
+    # +job_id+, caches it, and updates counters before returning the job.
+    # If the job does not exist, nothing is cached, however counters will be updated,
+    # and nil is returned
+    def fetch_and_cache_job(job_id)
+      job = fetch_job(job_id)
+      self.cache[job_id] = job unless job.nil?
+      @min_climbed_job_id = job_id if job_id < @min_climbed_job_id
+      @max_climbed_job_id = job_id if job_id > @max_climbed_job_id
+      return job
     end
 
 

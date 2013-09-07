@@ -16,10 +16,16 @@ module StalkClimber
 
 
     # Climb over all jobs on all connections in the connection pool.
-    # An instance of Job is yielded to +block+
-    def climb(&block)
-      self.connection_pool.connections.each do |connection|
-        connection.each(&block)
+    # An instance of Job is yielded. For more information see Connection#climb
+    def climb
+      enum = to_enum
+      return enum unless block_given?
+      loop do
+        begin
+          yield enum.next
+        rescue StopIteration
+          return ($ERROR_INFO.nil? || $ERROR_INFO.result.nil?) ? nil : $ERROR_INFO.result
+        end
       end
     end
     alias_method :each, :climb
@@ -27,7 +33,10 @@ module StalkClimber
 
     # Perform a threaded climb across all connections in the connection pool.
     # This method cannot be used for enumerable enumeration because a break
-    # called from one of the threads will cause a LocalJumpError
+    # called from one of the threads will cause a LocalJumpError. This could be
+    # fixed, but expected behavior on break varies as to whether or not to wait
+    # for all threads before returning a result. However, still useful for
+    # operations that always visit all jobs.
     # An instance of Job is yielded to +block+
     def climb_threaded(&block)
       threads = []
@@ -46,6 +55,20 @@ module StalkClimber
       self.beanstalk_addresses = beanstalk_addresses
       self.test_tube = test_tube
       yield(self) if block_given?
+    end
+
+    # Returns an Enumerator for enumerating jobs on all connections.
+    # Connections are enumerated in the order defined. See Connection#to_enum
+    # for more information
+    # A job is yielded with each iteration.
+    def to_enum
+      return Enumerator.new do |yielder|
+        self.connection_pool.connections.each do |connection|
+          connection.each do |job|
+            yielder << job
+          end
+        end
+      end
     end
 
   end
