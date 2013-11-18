@@ -78,7 +78,7 @@ module StalkClimber
         @body = @stats = nil
       when 'FOUND' # peek
         @id = job_data[:id].to_i
-        @body = JSON.parse(job_data[:body])
+        @body = JSON.parse(job_data[:body]) rescue job_data[:body]
         @stats = nil
       when 'OK' # stats-job
         @body = nil
