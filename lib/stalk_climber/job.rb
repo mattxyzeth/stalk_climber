@@ -15,7 +15,7 @@ module StalkClimber
 
     # Returns or fetches the body of the job obtained via the peek command
     def body
-      return @body ||= JSON.parse(connection.transmit("peek #{id}")[:body])
+      return @body ||= connection.transmit("peek #{id}")[:body]
     end
 
 
@@ -78,7 +78,7 @@ module StalkClimber
         @body = @stats = nil
       when 'FOUND' # peek
         @id = job_data[:id].to_i
-        @body = JSON.parse(job_data[:body]) rescue job_data[:body]
+        @body = job_data[:body]
         @stats = nil
       when 'OK' # stats-job
         @body = nil
