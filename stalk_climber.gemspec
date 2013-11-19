@@ -6,11 +6,11 @@ require 'stalk_climber/version'
 Gem::Specification.new do |spec|
   spec.name          = 'stalk_climber'
   spec.version       = StalkClimber::VERSION
-  spec.authors       = ['Freewrite.org']
-  spec.email         = ['dev@freewrite.org']
+  spec.authors       = ['Gemerald Beanstalk']
+  spec.email         = ['gemeraldbeanstalk@gmail.com']
   spec.description   = %q{Improved sequential access to Beanstalk}
   spec.summary       = %q{StalkClimber is a Ruby library allowing improved sequential access to Beanstalk via a job cache.}
-  spec.homepage      = 'https://github.com/freewrite/stalk_climber'
+  spec.homepage      = 'https://github.com/gemeraldbeanstalk/stalk_climber'
   spec.license       = 'MIT'
 
   spec.files         = `git ls-files`.split($/)
