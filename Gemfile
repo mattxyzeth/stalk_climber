@@ -2,7 +2,7 @@ source 'https://rubygems.org'
 
 gemspec
 
-gem 'debugger', :group => [:development, :test]
+gem 'debugger', :group => [:development, :test], :platforms => [:mri]
 
 group :test do
   gem 'coveralls', :require => false

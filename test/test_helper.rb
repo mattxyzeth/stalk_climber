@@ -1,4 +1,4 @@
-require 'debugger'
+require 'debugger' rescue nil
 require 'coveralls'
 Coveralls.wear!
 
