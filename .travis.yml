@@ -1,9 +1,10 @@
 language: ruby
 
 rvm:
-  - 1.9.2
   - 1.9.3
   - 2.0.0
+  - jruby-19mode
+  - rbx-19mode
 
 before_install:
   - sudo apt-get update -qq
@@ -17,3 +18,8 @@ before_install:
 
 env:
   - BEANSTALK_ADDRESSES='beanstalk://localhost:11300,beanstalk://localhost:11301'
+
+matrix:
+  allow_failures:
+    - rvm: jruby-19mode
+    - rvm: rbx-19mode
