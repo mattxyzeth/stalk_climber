@@ -35,8 +35,8 @@ module StalkClimber
       loop do
         begin
           yield enum.next
-        rescue StopIteration
-          return ($ERROR_INFO.nil? || $ERROR_INFO.result.nil?) ? nil : $ERROR_INFO.result
+        rescue StopIteration => e
+          return (e.nil? || !e.respond_to?(:result) || e.result.nil?) ? nil : e.result
         end
       end
     end

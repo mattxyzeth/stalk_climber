@@ -40,12 +40,6 @@ class ClimberTest < Test::Unit::TestCase
       end
     end
 
-    assert_raise LocalJumpError do
-      climber.each_threaded do |job|
-        break
-      end
-    end
-
     assert_nothing_raised do
       # test normal enumeration
       climber.each_threaded do |job|
