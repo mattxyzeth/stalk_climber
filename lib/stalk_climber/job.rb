@@ -41,7 +41,7 @@ module StalkClimber
 
 
     # Determines if a job exists by retrieving stats for the job. If Beaneater can't find
-    # the jobm then it does not exist and false is returned. The stats command is used
+    # the job then it does not exist and false is returned. The stats command is used
     # because it will return a response of a near constant size, whereas, depending on
     # the job, the peek command could return a much larger response. Rather than waste
     # the trip to the server, stats are updated each time the method is called.
