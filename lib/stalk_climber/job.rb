@@ -4,7 +4,7 @@ module StalkClimber
   class Job
 
     STATS_ATTRIBUTES = %w[age buries delay kicks pri releases reserves state time-left timeouts ttr tube]
-    HASH_ATTRIBUTES = (STATS_ATTRIBUTES + %w[body id]).sort!.map!(&:to_sym)
+    HASH_ATTRIBUTES = (STATS_ATTRIBUTES + %w[body connection id]).sort!.map!(&:to_sym)
     attr_reader :id
 
     STATS_ATTRIBUTES.each do |method_name|

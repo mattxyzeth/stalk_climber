@@ -168,6 +168,7 @@ class Job < Test::Unit::TestCase
       'age' => 3,
       'body' => job_body, # Will be ignored during job init
       'buries' => 0,
+      :connection => @connection, # Will be ignored during job init
       'delay' => 0,
       'id' => 4412,
       'kicks' => 0,
