@@ -7,30 +7,30 @@ class ConnectionTest < Test::Unit::TestCase
   end
 
 
-  def test_cache_creates_and_returns_hash_instance_variable
-    refute @connection.instance_variable_get(:@cache)
-    assert_equal({}, @connection.cache)
-    assert_equal({}, @connection.instance_variable_get(:@cache))
+  def test_cached_jobs_creates_and_returns_hash_instance_variable
+    refute @connection.instance_variable_get(:@cached_jobs)
+    assert_equal({}, @connection.cached_jobs)
+    assert_equal({}, @connection.instance_variable_get(:@cached_jobs))
   end
 
 
-  def test_cache_is_reset_if_max_job_id_lower_than_max_climbed_job_id
+  def test_cached_jobs_is_reset_if_max_job_id_lower_than_max_climbed_job_id
     seeds = seed_jobs
-    @connection.each {}
-    assert_not_equal({}, @connection.cache)
+    @connection.each_job {}
+    assert_not_equal({}, @connection.cached_jobs)
     assert_not_equal(Float::INFINITY, @connection.min_climbed_job_id)
     assert_not_equal(0, @connection.max_climbed_job_id)
 
     @connection.send(:update_climbed_job_ids_from_max_id, 1)
-    assert_equal({}, @connection.cache)
+    assert_equal({}, @connection.cached_jobs)
     assert_equal(Float::INFINITY, @connection.min_climbed_job_id)
     assert_equal(0, @connection.max_climbed_job_id)
     seeds.map(&:delete)
   end
 
 
-  def test_connection_is_some_kind_of_enumerable
-    assert @connection.kind_of?(Enumerable)
+  def test_job_enumerator_is_some_kind_of_enumerable
+    assert @connection.job_enumerator.kind_of?(Enumerable)
   end
 
 
@@ -39,7 +39,7 @@ class ConnectionTest < Test::Unit::TestCase
     seeds.map(&:delete)
     seed_ids = seeds.map(&:id)
 
-    deleted = @connection.detect do |job|
+    deleted = @connection.each_job.detect do |job|
       seed_ids.include?(job.id)
     end
 
@@ -47,16 +47,16 @@ class ConnectionTest < Test::Unit::TestCase
   end
 
 
-  def test_each_caches_jobs_for_later_use
+  def test_each_job_caches_jobs_for_later_use
     seeds = seed_jobs
 
     jobs = {}
-    @connection.each do |job|
+    @connection.each_job do |job|
       jobs[job.id] = job
     end
 
     @connection.expects(:with_job).never
-    @connection.each do |job|
+    @connection.each_job do |job|
       assert_equal jobs[job.id], job
     end
 
@@ -64,11 +64,11 @@ class ConnectionTest < Test::Unit::TestCase
   end
 
 
-  def test_each_deletes_cached_jobs_that_no_longer_exist
+  def test_each_job_deletes_cached_jobs_that_no_longer_exist
     seeds = seed_jobs
 
     jobs = {}
-    @connection.each do |job|
+    @connection.each_job do |job|
       jobs[job.id] = job
     end
 
@@ -76,7 +76,7 @@ class ConnectionTest < Test::Unit::TestCase
     deleted_job.delete
 
     @connection.expects(:with_job).never
-    @connection.each do |job|
+    @connection.each_job do |job|
       assert_equal jobs.delete(job.id), job
     end
 
@@ -87,11 +87,11 @@ class ConnectionTest < Test::Unit::TestCase
   end
 
 
-  def test_each_hits_jobs_below_climbed_range_that_have_not_been_hit
+  def test_each_job_hits_jobs_below_climbed_range_that_have_not_been_hit
     seeds = seed_jobs(10)
 
     count = 0
-    @connection.each do |job|
+    @connection.each_job do |job|
       count += 1
       break if count == 5
     end
@@ -99,7 +99,7 @@ class ConnectionTest < Test::Unit::TestCase
     initial_min_climbed_job_id = @connection.min_climbed_job_id
 
     all_jobs = {}
-    @connection.each do |job|
+    @connection.each_job do |job|
       all_jobs[job.id] = job
     end
 
@@ -113,11 +113,11 @@ class ConnectionTest < Test::Unit::TestCase
   end
 
 
-  def test_each_only_hits_each_job_once
+  def test_each_job_only_hits_each_job_once
     seeds = seed_jobs
 
     jobs = {}
-    @connection.each do |job|
+    @connection.each_job do |job|
       refute jobs[job.id]
       jobs[job.id] = job
     end
@@ -126,9 +126,9 @@ class ConnectionTest < Test::Unit::TestCase
   end
 
 
-  def test_each_calls_to_enum
-    @connection.expects(:to_enum).returns(Enumerator.new { |yielder| yielder << 1 })
-    @connection.each {}
+  def test_each_job_calls_job_enumerator
+    @connection.expects(:job_enumerator).returns(Enumerator.new { |yielder| yielder << 1 })
+    @connection.each_job {}
   end
 
 
@@ -191,7 +191,7 @@ class ConnectionTest < Test::Unit::TestCase
 
 
   def test_max_job_id_should_increment_max_climbed_id_if_successor
-    @connection.each {}
+    @connection.each_job {}
     max = @connection.max_climbed_job_id
     @connection.max_job_id
     assert_equal max + 1, @connection.max_climbed_job_id
@@ -199,7 +199,7 @@ class ConnectionTest < Test::Unit::TestCase
 
 
   def test_max_job_id_should_not_increment_max_climbed_id_unless_successor
-    @connection.each {}
+    @connection.each_job {}
     max = @connection.max_climbed_job_id
     seed_jobs(1).map(&:delete)
     @connection.max_job_id
@@ -207,13 +207,13 @@ class ConnectionTest < Test::Unit::TestCase
   end
 
 
-  def test_each_sets_min_and_max_climbed_job_ids_appropriately
+  def test_each_job_sets_min_and_max_climbed_job_ids_appropriately
     assert_equal Float::INFINITY, @connection.min_climbed_job_id
     assert_equal 0, @connection.max_climbed_job_id
 
     max_id = @connection.max_job_id
     @connection.expects(:max_job_id).once.returns(max_id)
-    @connection.each {}
+    @connection.each_job {}
 
     assert_equal 1, @connection.min_climbed_job_id
     assert_equal max_id, @connection.max_climbed_job_id

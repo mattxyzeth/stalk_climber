@@ -1,6 +1,5 @@
 module StalkClimber
   class Connection < Beaneater::Connection
-    include RUBY_VERSION >= '2.0.0' ? LazyEnumerable : Enumerable
 
     DEFAULT_TUBE = 'stalk_climber'
     PROBE_TRANSMISSION = "put 4294967295 0 300 2\r\n{}"
@@ -9,14 +8,14 @@ module StalkClimber
 
 
     # Returns or creates a Hash used for caching jobs by ID
-    def cache
-      return @cache ||= {}
+    def cached_jobs
+      return @cached_jobs ||= {}
     end
 
 
     # Resets the job cache and reinitializes the min and max climbed job ids
-    def clear_cache
-      @cache = nil
+    def clear_job_cache
+      @cached_jobs = nil
       @min_climbed_job_id = Float::INFINITY
       @max_climbed_job_id = 0
     end
@@ -26,11 +25,10 @@ module StalkClimber
     # Job for each existing job on the beanstalk server. Jobs are enumerated in three phases. Jobs
     # between max_job_id and the max_climbed_job_id are pulled from beanstalk, cached, and yielded.
     # Jobs that have already been cached are yielded if they still exist, otherwise they are deleted
-    # from the cache. Finally, jobs between min_climbed_job_id and 1 are pulled from beanstalk, cached,
-    # and yielded.
-    # Connection#each fulfills Enumberable contract, allowing connection to behave as an Enumerable.
-    def climb
-      enum = to_enum
+    # from the job cache. Finally, jobs between min_climbed_job_id and 1 are pulled from beanstalk,
+    # cached, and yielded.
+    def each_job
+      enum = job_enumerator
       return enum unless block_given?
       loop do
         begin
@@ -40,7 +38,6 @@ module StalkClimber
         end
       end
     end
-    alias_method :each, :climb
 
 
     # Safe form of fetch_job!, returns a Job instance for the specified +job_id+.
@@ -84,7 +81,7 @@ module StalkClimber
     def initialize(address, test_tube = DEFAULT_TUBE)
       super(address)
       @test_tube = test_tube || DEFAULT_TUBE
-      clear_cache
+      clear_job_cache
       yield(self) if block_given?
       use_test_tube
     end
@@ -92,7 +89,7 @@ module StalkClimber
 
     # Determintes the max job ID of the connection by inserting a job into the test tube
     # and immediately deleting it. Before returning the max ID, the max ID is used to
-    # update the max_climbed_job_id (if sequentual) and possibly invalidate the cache.
+    # update the max_climbed_job_id (if sequentual) and possibly invalidate the job cache.
     # The cache will be invalidated if the max ID is less than any known IDs since
     # new job IDs should always increment unless there's been a change in server state.
     def max_job_id
@@ -111,12 +108,12 @@ module StalkClimber
 
 
     # Returns an Enumerator for crawling all existing jobs for a connection.
-    # See Connection#each for more information.
-    def to_enum
+    # See Connection#each_job for more information.
+    def job_enumerator
       return Enumerator.new do |yielder|
         max_id = max_job_id
 
-        initial_cached_jobs = cache.values_at(*cache.keys.sort.reverse)
+        initial_cached_jobs = cached_jobs.values_at(*cached_jobs.keys.sort.reverse)
 
         max_id.downto(self.max_climbed_job_id + 1) do |job_id|
           job = fetch_and_cache_job(job_id)
@@ -127,7 +124,7 @@ module StalkClimber
           if job.exists?
             yielder << job
           else
-            self.cache.delete(job.id)
+            self.cached_jobs.delete(job.id)
           end
         end
 
@@ -147,7 +144,7 @@ module StalkClimber
     # and nil is returned
     def fetch_and_cache_job(job_id)
       job = fetch_job(job_id)
-      self.cache[job_id] = job unless job.nil?
+      self.cached_jobs[job_id] = job unless job.nil?
       @min_climbed_job_id = job_id if job_id < @min_climbed_job_id
       @max_climbed_job_id = job_id if job_id > @max_climbed_job_id
       return job
@@ -155,13 +152,13 @@ module StalkClimber
 
 
     # Uses +new_max_id+ to update the max_climbed_job_id (if sequentual) and possibly invalidate
-    # the cache. The cache will be invalidated if +new_max_id+ is less than any known IDs since
-    # new job IDs should always increment unless there's been a change in server state.
+    # the job cache. The job cache will be invalidated if +new_max_id+ is less than any known
+    # IDs since new job IDs should always increment unless there's been a change in server state.
     def update_climbed_job_ids_from_max_id(new_max_id)
       if @max_climbed_job_id > 0 && @max_climbed_job_id == new_max_id - 1
         @max_climbed_job_id = new_max_id
       elsif new_max_id < @max_climbed_job_id
-        clear_cache
+        clear_job_cache
       end
     end
 
