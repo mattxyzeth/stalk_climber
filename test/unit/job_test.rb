@@ -1,196 +1,230 @@
 require 'test_helper'
 require 'json'
 
-class Job < Test::Unit::TestCase
+class Job < StalkClimber::TestCase
 
-  def setup
+  setup do
     @connection = StalkClimber::Connection.new('localhost:11300')
     @job = seed_jobs(1).first
   end
 
 
-  def test_body_performs_peek_and_parses_json
-    body = {'test' => true}.to_json
+  context '#body' do
 
-    @job.connection.expects(:transmit).returns({
-      :body => body,
-    })
-    assert_equal body, @job.body
+    should 'perform peek and set/return body' do
+      body = {'test' => true}.to_json
 
-    @job.connection.expects(:transmit).never
-    assert_equal body, @job.body
-  end
+      @job.connection.expects(:transmit).returns({
+        :body => body,
+      })
+      assert_equal body, @job.body
 
-
-  def test_connection_stored_with_instance
-    assert @job.instance_variable_get(:@connection)
-    assert @job.connection
-  end
-
-
-  def test_delete
-    assert @job.delete
-    assert_raise Beaneater::NotFoundError do
-      @connection.transmit("peek #{@job.id}")
+      @job.connection.expects(:transmit).never
+      assert_equal body, @job.body
     end
-    refute @job.instance_variable_get(:@body)
-    refute @job.instance_variable_get(:@stats)
-    assert_equal 'DELETED', @job.instance_variable_get(:@status)
+
   end
 
 
-  def test_exists?
-    assert @job.exists?
+  context '#connection' do
 
-    @job.delete
-    refute @job.exists?
-  end
-
-
-  def test_initialize_with_peek_response
-    job = StalkClimber::Job.new(@connection.transmit("peek #{@job.id}"))
-    @connection.expects(:transmit).never
-    assert_equal @connection, job.connection
-    assert_equal @job.id, job.id
-    assert_equal 'FOUND', job.instance_variable_get(:@status)
-    assert_equal('{}', job.body)
-    refute job.instance_variable_get(:@stats)
-  end
-
-
-  def test_initialize_with_put_response
-    @connection.expects(:transmit).never
-    assert @job.id
-    assert_equal @connection, @job.connection
-    assert_equal 'INSERTED', @job.instance_variable_get(:@status)
-    refute @job.instance_variable_get(:@body)
-    refute @job.instance_variable_get(:@stats)
-  end
-
-
-  def test_initialize_with_stats_response
-    job = StalkClimber::Job.new(@connection.transmit("stats-job #{@job.id}"))
-    @connection.expects(:transmit).never
-    assert_equal @job.id, job.id
-    assert_equal @connection, job.connection
-    assert_equal 'OK', job.instance_variable_get(:@status)
-    assert job.stats
-    assert job.instance_variable_get(:@stats)
-    refute job.instance_variable_get(:@body)
-    StalkClimber::Job::STATS_ATTRIBUTES.each do |method_name|
-      assert job.send(method_name)
+    should 'set connection instance variable to connection' do
+      assert @job.instance_variable_get(:@connection)
+      assert @job.connection
     end
+
   end
 
 
-  def test_initialize_with_stats_attribute_methods_return_correct_values
-    stats_body = {
-      'age' => 3,
-      'buries' => 0,
-      'delay' => 0,
-      'id' => 4412,
-      'kicks' => 0,
-      'pri' => 4294967295,
-      'releases' => 0,
-      'reserves' => 0,
-      'state' => 'ready',
-      'time-left' => 0,
-      'timeouts' => 0,
-      'ttr'  => 300,
-      'tube' => 'default',
-    }
-    stats_response = {
-      :body => stats_body,
-      :connection => @connection,
-      :id => 149,
-      :status => 'OK',
-    }
-    job = StalkClimber::Job.new(stats_response)
-    StalkClimber::Job::STATS_ATTRIBUTES.each do |method_name|
-      assert_equal stats_body[method_name], job.send(method_name), "Expected #{stats_body[method_name.to_sym]} for #{method_name}, got #{job.send(method_name)}"
+  context '#delete' do
+
+    should 'delete the job' do
+      assert @job.delete
+      assert_raises Beaneater::NotFoundError do
+        @connection.transmit("peek #{@job.id}")
+      end
+      refute @job.instance_variable_get(:@body)
+      refute @job.instance_variable_get(:@stats)
+      assert_equal 'DELETED', @job.instance_variable_get(:@status)
     end
+
   end
 
 
-  def test_initialize_with_unknown_status_raises_error
-    assert_raise RuntimeError do
-      StalkClimber::Job.new({:status => 'DELETED'})
+  context '#exists?' do
+
+
+    should 'verify the job exists' do
+      assert @job.exists?
+
+      @job.delete
+      refute @job.exists?
     end
+
   end
 
 
-  def test_stats_attribute_method_can_force_refresh
-    initial_value = @job.age
-    @connection.expects(:transmit).returns({:body => {'age' => initial_value + 100}})
-    assert_equal initial_value + 100, @job.age(true)
-  end
+  context '#initialize' do
 
-
-  def test_stats_can_force_a_refresh
-    body = {
-      'age'=>3,
-      'buries'=>0,
-      'delay'=>0,
-      'kicks'=>0,
-      'id' => 4412,
-      'pri'=>4294967295,
-      'releases'=>0,
-      'reserves'=>0,
-      'state'=>'ready',
-      'time-left'=>0,
-      'timeouts'=>0,
-      'ttr'=>300,
-      'tube'=>'default',
-    }
-    stats_1 = {
-      :body => {},
-      :connection => @connection,
-      :id => 149,
-      :status => 'OK',
-    }
-    stats_2 = {
-      :body => body,
-      :connection => @connection,
-      :id => 149,
-      :status => 'OK',
-    }
-    @connection.expects(:transmit).twice.returns(stats_1, stats_2)
-    job = StalkClimber::Job.new(@connection.transmit("stats-job #{@job.id}"))
-    job.stats(:force_refresh)
-    StalkClimber::Job::STATS_ATTRIBUTES.each do |method_name|
-      assert_equal body[method_name], job.send(method_name), "Expected #{body[method_name.to_sym]} for #{method_name}, got #{job.send(method_name)}"
+    should 'support initialization with peek response' do
+      job = StalkClimber::Job.new(@connection.transmit("peek #{@job.id}"))
+      @connection.expects(:transmit).never
+      assert_equal @connection, job.connection
+      assert_equal @job.id, job.id
+      assert_equal 'FOUND', job.instance_variable_get(:@status)
+      assert_equal('{}', job.body)
+      refute job.instance_variable_get(:@stats)
     end
+
+
+    should 'support initialization with put response' do
+      @connection.expects(:transmit).never
+      assert @job.id
+      assert_equal @connection, @job.connection
+      assert_equal 'INSERTED', @job.instance_variable_get(:@status)
+      refute @job.instance_variable_get(:@body)
+      refute @job.instance_variable_get(:@stats)
+    end
+
+
+    should 'support initialization with stats_response' do
+      job = StalkClimber::Job.new(@connection.transmit("stats-job #{@job.id}"))
+      @connection.expects(:transmit).never
+      assert_equal @job.id, job.id
+      assert_equal @connection, job.connection
+      assert_equal 'OK', job.instance_variable_get(:@status)
+      assert job.stats
+      assert job.instance_variable_get(:@stats)
+      refute job.instance_variable_get(:@body)
+      StalkClimber::Job::STATS_ATTRIBUTES.each do |method_name|
+        assert job.send(method_name)
+      end
+    end
+
+
+    should 'raise error if initialized with unknown response type' do
+      assert_raises RuntimeError do
+        StalkClimber::Job.new({:status => 'DELETED'})
+      end
+    end
+
   end
 
-  def test_to_h_returns_expected_hash
-    job_body = "test #{Time.now.to_i}"
-    stats_body = {
-      'age' => 3,
-      'body' => job_body, # Will be ignored during job init
-      'buries' => 0,
-      :connection => @connection, # Will be ignored during job init
-      'delay' => 0,
-      'id' => 4412,
-      'kicks' => 0,
-      'pri' => 4294967295,
-      'releases' => 0,
-      'reserves' => 0,
-      'state' => 'ready',
-      'time-left' => 0,
-      'timeouts' => 0,
-      'ttr'  => 300,
-      'tube' => 'default',
-    }
-    stats_response = {
-      :body => stats_body,
-      :connection => @connection,
-      :id => 149,
-      :status => 'OK',
-    }
-    job = StalkClimber::Job.new(stats_response)
-    job.instance_variable_set(:@body, job_body)
-    expected_hash = Hash[stats_body.map { |k, v| [k.to_sym, v] }]
-    assert_equal expected_hash, job.to_h
+
+  context 'stats methods' do
+
+    should 'initialize stats attributes and attribute methods should return correct values' do
+      stats_body = {
+        'age' => 3,
+        'buries' => 0,
+        'delay' => 0,
+        'id' => 4412,
+        'kicks' => 0,
+        'pri' => 4294967295,
+        'releases' => 0,
+        'reserves' => 0,
+        'state' => 'ready',
+        'time-left' => 0,
+        'timeouts' => 0,
+        'ttr'  => 300,
+        'tube' => 'default',
+      }
+      stats_response = {
+        :body => stats_body,
+        :connection => @connection,
+        :id => 149,
+        :status => 'OK',
+      }
+      job = StalkClimber::Job.new(stats_response)
+      StalkClimber::Job::STATS_ATTRIBUTES.each do |method_name|
+        assert_equal stats_body[method_name], job.send(method_name), "Expected #{stats_body[method_name.to_sym]} for #{method_name}, got #{job.send(method_name)}"
+      end
+    end
+
+
+    should 'be able to force refresh of stats' do
+      initial_value = @job.age
+      @connection.expects(:transmit).returns({:body => {'age' => initial_value + 100}})
+      assert_equal initial_value + 100, @job.age(true)
+    end
+
+  end
+
+
+  context '#stats' do
+
+    should 'be able to force refresh' do
+      body = {
+        'age'=>3,
+        'buries'=>0,
+        'delay'=>0,
+        'kicks'=>0,
+        'id' => 4412,
+        'pri'=>4294967295,
+        'releases'=>0,
+        'reserves'=>0,
+        'state'=>'ready',
+        'time-left'=>0,
+        'timeouts'=>0,
+        'ttr'=>300,
+        'tube'=>'default',
+      }
+      stats_1 = {
+        :body => {},
+        :connection => @connection,
+        :id => 149,
+        :status => 'OK',
+      }
+      stats_2 = {
+        :body => body,
+        :connection => @connection,
+        :id => 149,
+        :status => 'OK',
+      }
+      @connection.expects(:transmit).twice.returns(stats_1, stats_2)
+      job = StalkClimber::Job.new(@connection.transmit("stats-job #{@job.id}"))
+      job.stats(:force_refresh)
+      StalkClimber::Job::STATS_ATTRIBUTES.each do |method_name|
+        assert_equal body[method_name], job.send(method_name), "Expected #{body[method_name.to_sym]} for #{method_name}, got #{job.send(method_name)}"
+      end
+    end
+
+  end
+
+
+  context '#to_h' do
+
+    should 'return the expected hash' do
+      job_body = "test #{Time.now.to_i}"
+      stats_body = {
+        'age' => 3,
+        'body' => job_body, # Will be ignored during job init
+        'buries' => 0,
+        :connection => @connection, # Will be ignored during job init
+        'delay' => 0,
+        'id' => 4412,
+        'kicks' => 0,
+        'pri' => 4294967295,
+        'releases' => 0,
+        'reserves' => 0,
+        'state' => 'ready',
+        'time-left' => 0,
+        'timeouts' => 0,
+        'ttr'  => 300,
+        'tube' => 'default',
+      }
+      stats_response = {
+        :body => stats_body,
+        :connection => @connection,
+        :id => 149,
+        :status => 'OK',
+      }
+      job = StalkClimber::Job.new(stats_response)
+      job.instance_variable_set(:@body, job_body)
+      expected_hash = Hash[stats_body.map { |k, v| [k.to_sym, v] }]
+      assert_equal expected_hash, job.to_h
+    end
+
   end
 
 end
