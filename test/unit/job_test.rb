@@ -84,32 +84,30 @@ class Job < Test::Unit::TestCase
 
 
   def test_initialize_with_stats_attribute_methods_return_correct_values
-    body = {
-      'age'=>3,
-      'buries'=>0,
-      'delay'=>0,
+    stats_body = {
+      'age' => 3,
+      'buries' => 0,
+      'delay' => 0,
       'id' => 4412,
-      'kicks'=>0,
-      'pri'=>4294967295,
-      'releases'=>0,
-      'reserves'=>0,
-      'state'=>'ready',
-      'time-left'=>0,
-      'timeouts'=>0,
-      'ttr'=>300,
-      'tube'=>'default',
+      'kicks' => 0,
+      'pri' => 4294967295,
+      'releases' => 0,
+      'reserves' => 0,
+      'state' => 'ready',
+      'time-left' => 0,
+      'timeouts' => 0,
+      'ttr'  => 300,
+      'tube' => 'default',
     }
-    stats = {
-      :body => body,
+    stats_response = {
+      :body => stats_body,
       :connection => @connection,
       :id => 149,
       :status => 'OK',
     }
-    @connection.expects(:transmit).returns(stats)
-    job = StalkClimber::Job.new(@connection.transmit("stats-job #{@job.id}"))
-    @connection.expects(:transmit).never
+    job = StalkClimber::Job.new(stats_response)
     StalkClimber::Job::STATS_ATTRIBUTES.each do |method_name|
-      assert_equal body[method_name], job.send(method_name), "Expected #{body[method_name.to_sym]} for #{method_name}, got #{job.send(method_name)}"
+      assert_equal stats_body[method_name], job.send(method_name), "Expected #{stats_body[method_name.to_sym]} for #{method_name}, got #{job.send(method_name)}"
     end
   end
 
@@ -162,6 +160,36 @@ class Job < Test::Unit::TestCase
     StalkClimber::Job::STATS_ATTRIBUTES.each do |method_name|
       assert_equal body[method_name], job.send(method_name), "Expected #{body[method_name.to_sym]} for #{method_name}, got #{job.send(method_name)}"
     end
+  end
+
+  def test_to_h_returns_expected_hash
+    job_body = "test #{Time.now.to_i}"
+    stats_body = {
+      'age' => 3,
+      'body' => job_body, # Will be ignored during job init
+      'buries' => 0,
+      'delay' => 0,
+      'id' => 4412,
+      'kicks' => 0,
+      'pri' => 4294967295,
+      'releases' => 0,
+      'reserves' => 0,
+      'state' => 'ready',
+      'time-left' => 0,
+      'timeouts' => 0,
+      'ttr'  => 300,
+      'tube' => 'default',
+    }
+    stats_response = {
+      :body => stats_body,
+      :connection => @connection,
+      :id => 149,
+      :status => 'OK',
+    }
+    job = StalkClimber::Job.new(stats_response)
+    job.instance_variable_set(:@body, job_body)
+    expected_hash = Hash[stats_body.map { |k, v| [k.to_sym, v] }]
+    assert_equal expected_hash, job.to_h
   end
 
 end

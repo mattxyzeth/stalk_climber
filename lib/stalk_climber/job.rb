@@ -4,6 +4,7 @@ module StalkClimber
   class Job
 
     STATS_ATTRIBUTES = %w[age buries delay kicks pri releases reserves state time-left timeouts ttr tube]
+    HASH_ATTRIBUTES = (STATS_ATTRIBUTES + %w[body id]).sort!.map!(&:to_sym)
     attr_reader :id
 
     STATS_ATTRIBUTES.each do |method_name|
@@ -81,9 +82,9 @@ module StalkClimber
         @body = job_data[:body]
         @stats = nil
       when 'OK' # stats-job
-        @body = nil
-        @stats = job_data.delete(:body)
+        @stats = job_data[:body].dup
         @id = @stats.delete('id').to_i
+        @body = nil
       else
         raise RuntimeError, "Unexpected job status: #{job_data[:status]}"
       end
@@ -99,6 +100,12 @@ module StalkClimber
       @stats = connection.transmit("stats-job #{id}")[:body]
       @stats.delete('id')
       return @stats
+    end
+
+
+    # Returns a hash of all job attributes
+    def to_h
+      return Hash[HASH_ATTRIBUTES.map { |attr| [attr, send(attr) ] } ]
     end
 
 
