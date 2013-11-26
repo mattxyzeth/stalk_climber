@@ -1,5 +1,6 @@
 module StalkClimber; end
 
+require 'forwardable'
 require 'beaneater'
 require 'stalk_climber/version'
 require 'stalk_climber/lazy_enumerable'
