@@ -3,24 +3,10 @@ module StalkClimber
   class Jobs
 
     include RUBY_VERSION >= '2.0.0' ? LazyEnumerable : Enumerable
+    extend Forwardable
 
-
+    def_delegators :to_enum, :each
     attr_reader :climber
-
-
-    # Iterate over all jobs on all connections in the climber's connection pool.
-    # An instance of Job is yielded. For more information see Connection#each_job
-    def each
-      enum = to_enum
-      return enum unless block_given?
-      loop do
-        begin
-          yield enum.next
-        rescue StopIteration => e
-          return (e.nil? || !e.respond_to?(:result) || e.result.nil?) ? nil : e.result
-        end
-      end
-    end
 
 
     # Perform a threaded iteration across all connections in the climber's
@@ -60,6 +46,11 @@ module StalkClimber
         end
       end
     end
+
+
+    # :method each
+    # Iterate over all jobs on all connections in the climber's connection pool.
+    # An instance of Job is yielded. For more information see Connection#each_job
 
   end
 
