@@ -34,6 +34,15 @@ module StalkClimber
     end
 
 
+    # Interface for tube enumerator/enumeration in creation order (list-tubes order). Returns an instance of
+    # Tube for each existing tube on the beanstalk server. Unlike Jobs, tubes are not cached because they are
+    # more easily accessible
+    def each_tube
+      return tube_enumerator unless block_given?
+      return breakable_enumerator(tube_enumerator, &Proc.new)
+    end
+
+
     # Safe form of fetch_job!, returns a Job instance for the specified +job_id+.
     # If the job does not exist, the error is caught and nil is passed returned instead.
     def fetch_job(job_id)
@@ -126,6 +135,14 @@ module StalkClimber
           job = fetch_and_cache_job(job_id)
           yielder << job unless job.nil?
         end
+      end
+    end
+
+
+    # Returns an Enumerator for crawling all existing tubes for a connection.
+    # See Connection#each_tube for more information.
+    def tube_enumerator
+      return Enumerator.new do |yielder|
       end
     end
 
