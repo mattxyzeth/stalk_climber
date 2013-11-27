@@ -3,10 +3,17 @@ module StalkClimber
   class Jobs
 
     include RUBY_VERSION >= '2.0.0' ? LazyEnumerable : Enumerable
-    extend Forwardable
+    include BreakableEnumerator
 
-    def_delegators :to_enum, :each
     attr_reader :climber
+
+
+    # Iterate over all jobs on all connections in the climber's connection pool.
+    # An instance of Job is yielded. For more information see Connection#each_job
+    def each
+      return to_enum unless block_given?
+      return breakable_enumerator(to_enum, &Proc.new)
+    end
 
 
     # Perform a threaded iteration across all connections in the climber's
@@ -46,11 +53,6 @@ module StalkClimber
         end
       end
     end
-
-
-    # :method each
-    # Iterate over all jobs on all connections in the climber's connection pool.
-    # An instance of Job is yielded. For more information see Connection#each_job
 
   end
 

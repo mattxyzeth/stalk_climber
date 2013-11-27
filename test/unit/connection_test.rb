@@ -154,6 +154,19 @@ class ConnectionTest < StalkClimber::TestCase
       assert_equal max_id, @connection.max_climbed_job_id
     end
 
+
+    should 'allow for breaking enumeration' do
+      begin
+        count = 0
+        @connection.each_job do |job|
+          break if 2 == count += 1
+          assert(false, "Connection#each_job did not break when expected") if count >= 3
+        end
+      rescue => e
+        assert(false, "Breaking from Connection#each_job raised #{e.inspect}")
+      end
+    end
+
   end
 
   context '#fetch_job' do

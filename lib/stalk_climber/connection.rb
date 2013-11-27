@@ -1,14 +1,11 @@
 module StalkClimber
-
   class Connection < Beaneater::Connection
 
-    extend Forwardable
-
+    include BreakableEnumerator
     DEFAULT_TUBE = 'stalk_climber'
     PROBE_TRANSMISSION = "put 4294967295 0 300 2\r\n{}"
 
     attr_reader :max_climbed_job_id, :min_climbed_job_id, :test_tube
-    def_delegator :job_enumerator, :each, :each_job
 
 
     # Returns or creates a Hash used for caching jobs by ID
@@ -22,6 +19,18 @@ module StalkClimber
       @cached_jobs = nil
       @min_climbed_job_id = Float::INFINITY
       @max_climbed_job_id = 0
+    end
+
+
+    # Interface for job enumerator/enumeration in descending ID order. Returns an instance of
+    # Job for each existing job on the beanstalk server. Jobs are enumerated in three phases. Jobs
+    # between max_job_id and the max_climbed_job_id are pulled from beanstalk, cached, and yielded.
+    # Jobs that have already been cached are yielded if they still exist, otherwise they are deleted
+    # from the job cache. Finally, jobs between min_climbed_job_id and 1 are pulled from beanstalk,
+    # cached, and yielded.
+    def each_job
+      return job_enumerator unless block_given?
+      return breakable_enumerator(job_enumerator, &Proc.new)
     end
 
 
@@ -160,15 +169,5 @@ module StalkClimber
       end
     end
 
-
-    # :method each_job
-    # Interface for job enumerator/enumeration in descending ID order. Returns an instance of
-    # Job for each existing job on the beanstalk server. Jobs are enumerated in three phases. Jobs
-    # between max_job_id and the max_climbed_job_id are pulled from beanstalk, cached, and yielded.
-    # Jobs that have already been cached are yielded if they still exist, otherwise they are deleted
-    # from the job cache. Finally, jobs between min_climbed_job_id and 1 are pulled from beanstalk,
-    # cached, and yielded.
-
   end
-
 end
