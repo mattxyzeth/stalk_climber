@@ -147,6 +147,7 @@ module StalkClimber
           job = fetch_and_cache_job(job_id)
           yielder << job unless job.nil?
         end
+        nil
       end
     end
 
