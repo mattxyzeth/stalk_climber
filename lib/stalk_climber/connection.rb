@@ -1,7 +1,9 @@
 module StalkClimber
   class Connection < Beaneater::Connection
 
-    include BreakableEnumerator
+    extend Forwardable
+
+    def_delegator :job_enumerator, :each, :each_job
 
     # Default tube used when no custom tube in use
     DEFAULT_TUBE = 'stalk_climber'
@@ -32,26 +34,7 @@ module StalkClimber
       @cached_jobs = nil
       @min_climbed_job_id = Float::INFINITY
       @max_climbed_job_id = 0
-    end
-
-
-    # :call-seq:
-    #   each_job() => Enumerator
-    #   each_job {|job| block }
-    # Interface for job enumerator/enumeration in descending ID order. Returns an instance of
-    # Job for each existing job on the beanstalk server. Jobs are enumerated in three phases. Jobs
-    # between max_job_id and the max_climbed_job_id are pulled from beanstalk, cached, and yielded.
-    # Jobs that have already been cached are yielded if they still exist, otherwise they are deleted
-    # from the job cache. Finally, jobs between min_climbed_job_id and 1 are pulled from beanstalk,
-    # cached, and yielded.
-    #
-    #   connection = Connection.new('localhost:11300')
-    #   connection.each_job do |job|
-    #     job.delete
-    #   end
-    def each_job
-      return job_enumerator unless block_given?
-      return breakable_enumerator(job_enumerator, &Proc.new)
+      return true
     end
 
 
@@ -190,6 +173,22 @@ module StalkClimber
         transmit(transmission)
       end
     end
+
+
+    # :call-seq:
+    #   each_job() => Enumerator
+    #   each_job {|job| block }
+    # Interface for job enumerator/enumeration in descending ID order. Returns an instance of
+    # Job for each existing job on the beanstalk server. Jobs are enumerated in three phases. Jobs
+    # between max_job_id and the max_climbed_job_id are pulled from beanstalk, cached, and yielded.
+    # Jobs that have already been cached are yielded if they still exist, otherwise they are deleted
+    # from the job cache. Finally, jobs between min_climbed_job_id and 1 are pulled from beanstalk,
+    # cached, and yielded.
+    #
+    #   connection = Connection.new('localhost:11300')
+    #   connection.each_job do |job|
+    #     job.delete
+    #   end
 
   end
 end

@@ -3,7 +3,9 @@ module StalkClimber
   module ClimberEnumerable
 
     include RUBY_VERSION >= '2.0.0' ? LazyEnumerable : Enumerable
-    include BreakableEnumerator
+    extend Forwardable
+
+    def_delegators :to_enum, :each
 
     # A reference to the climber instance to which this enumerable belongs
     attr_reader :climber
@@ -47,26 +49,6 @@ module StalkClimber
     end
 
 
-    # :call-seq:
-    #   each {|obj| block} => Object
-    #
-    # Iterate over all elements on all connections in the climber's connection
-    # pool. If no block is given, returns the enumerator provided by #to_enum.
-    # An instance of the element is yielded to a given block. For more information
-    # see the method on Connection designated :enumerator_method by the implementing class
-    #
-    #   jobs = ClimberEnumerable.new(:each_job)
-    #   instance = jobs.new(climber)
-    #   instance.each do |job|
-    #     break job
-    #   end
-    #     #=> #<StalkClimber::Job id=1 body="Work to be done">
-    def each
-      return to_enum unless block_given?
-      return breakable_enumerator(to_enum, &Proc.new)
-    end
-
-
     # Perform a threaded iteration across all connections in the climber's
     # connection pool. This method cannot be used for enumerable enumeration
     # because a break called within one of the threads will cause a LocalJumpError.
@@ -106,6 +88,22 @@ module StalkClimber
         end
       end
     end
+
+
+    # :call-seq:
+    #   each {|obj| block} => Object
+    #
+    # Iterate over all elements on all connections in the climber's connection
+    # pool. If no block is given, returns the enumerator provided by #to_enum.
+    # An instance of the element is yielded to a given block. For more information
+    # see the method on Connection designated :enumerator_method by the implementing class
+    #
+    #   jobs = ClimberEnumerable.new(:each_job)
+    #   instance = jobs.new(climber)
+    #   instance.each do |job|
+    #     break job
+    #   end
+    #     #=> #<StalkClimber::Job id=1 body="Work to be done">
 
   end
 
