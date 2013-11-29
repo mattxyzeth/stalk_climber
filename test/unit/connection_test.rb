@@ -93,7 +93,7 @@ class ConnectionTest < StalkClimber::TestCase
       assert_equal 1, jobs.length
       assert_equal deleted_job.id, jobs.values.first.id
 
-      seeds.map(&:delete)
+      seeds.map {|job| job.delete if job.exists? }
     end
 
 

@@ -1,5 +1,4 @@
 require 'test_helper'
-require 'json'
 
 class Job < StalkClimber::TestCase
 
@@ -9,10 +8,19 @@ class Job < StalkClimber::TestCase
   end
 
 
+  context 'beaneater integration' do
+
+    should 'derive from Beaneater::Job' do
+      assert_kind_of Beaneater::Job, @job
+    end
+
+  end
+
+
   context '#body' do
 
     should 'perform peek and set/return body' do
-      body = {'test' => true}.to_json
+      body = "test #{Time.now.to_i}"
 
       @job.connection.expects(:transmit).returns({
         :body => body,
@@ -87,18 +95,29 @@ class Job < StalkClimber::TestCase
     end
 
 
-    should 'support initialization with stats_response' do
+    should 'support initialization with stats response' do
       job = StalkClimber::Job.new(@connection.transmit("stats-job #{@job.id}"))
       @connection.expects(:transmit).never
       assert_equal @job.id, job.id
       assert_equal @connection, job.connection
       assert_equal 'OK', job.instance_variable_get(:@status)
-      assert job.stats
+      assert job.stats(false)
       assert job.instance_variable_get(:@stats)
       refute job.instance_variable_get(:@body)
-      StalkClimber::Job::STATS_ATTRIBUTES.each do |method_name|
+      StalkClimber::Job::CACHED_ATTRIBUTES.each do |method_name|
         assert job.send(method_name)
       end
+    end
+
+
+    should 'support initialization with reserve response' do
+      job = StalkClimber::Job.new(@connection.transmit('reserve'))
+      @connection.expects(:transmit).never
+      assert_equal @connection, job.connection
+      assert job.id
+      assert_equal 'RESERVED', job.instance_variable_get(:@status)
+      assert_equal('{}', job.body)
+      refute job.instance_variable_get(:@stats)
     end
 
 
@@ -136,7 +155,7 @@ class Job < StalkClimber::TestCase
         :status => 'OK',
       }
       job = StalkClimber::Job.new(stats_response)
-      StalkClimber::Job::STATS_ATTRIBUTES.each do |method_name|
+      StalkClimber::Job::CACHED_ATTRIBUTES.each do |method_name|
         assert_equal stats_body[method_name], job.send(method_name), "Expected #{stats_body[method_name.to_sym]} for #{method_name}, got #{job.send(method_name)}"
       end
     end
@@ -146,6 +165,13 @@ class Job < StalkClimber::TestCase
       initial_value = @job.age
       @connection.expects(:transmit).returns({:body => {'age' => initial_value + 100}})
       assert_equal initial_value + 100, @job.age(true)
+    end
+
+
+    should 'allow for not refreshing stats' do
+      initial_value = @job.age
+      @connection.expects(:transmit).never
+      assert_equal initial_value, @job.age(false)
     end
 
   end
@@ -183,10 +209,17 @@ class Job < StalkClimber::TestCase
       }
       @connection.expects(:transmit).twice.returns(stats_1, stats_2)
       job = StalkClimber::Job.new(@connection.transmit("stats-job #{@job.id}"))
-      job.stats(:force_refresh)
-      StalkClimber::Job::STATS_ATTRIBUTES.each do |method_name|
+      job.stats
+      StalkClimber::Job::CACHED_ATTRIBUTES.each do |method_name|
         assert_equal body[method_name], job.send(method_name), "Expected #{body[method_name.to_sym]} for #{method_name}, got #{job.send(method_name)}"
       end
+    end
+
+
+    should 'allow for not refreshing stats' do
+      stat = @job.stats
+      @job.connection.expects(:transmit).never
+      assert_equal stat, @job.stats(false)
     end
 
   end
@@ -200,7 +233,7 @@ class Job < StalkClimber::TestCase
         'age' => 3,
         'body' => job_body, # Will be ignored during job init
         'buries' => 0,
-        :connection => @connection, # Will be ignored during job init
+        'connection' => @connection, # Will be ignored during job init
         'delay' => 0,
         'id' => 4412,
         'kicks' => 0,
@@ -221,8 +254,18 @@ class Job < StalkClimber::TestCase
       }
       job = StalkClimber::Job.new(stats_response)
       job.instance_variable_set(:@body, job_body)
-      expected_hash = Hash[stats_body.map { |k, v| [k.to_sym, v] }]
+      job.connection.expects(:transmit).once.returns(stats_response)
+      expected_hash = Hash[stats_body.map { |k, v| [k, v] }]
       assert_equal expected_hash, job.to_h
+    end
+
+  end
+
+
+  context '#to_s' do
+
+    should 'return expected string representation of job' do
+      assert_equal "#<StalkClimber::Job id=#{@job.id} body=#{@job.body.inspect}>", @job.to_s
     end
 
   end

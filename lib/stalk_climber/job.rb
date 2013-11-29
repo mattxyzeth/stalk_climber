@@ -1,12 +1,21 @@
 module StalkClimber
-  class Job
+  class Job < Beaneater::Job
 
-    STATS_ATTRIBUTES = %w[age buries delay kicks pri releases reserves state time-left timeouts ttr tube]
-    HASH_ATTRIBUTES = (STATS_ATTRIBUTES + %w[body connection id]).sort!.map!(&:to_sym)
-    attr_reader :id
+    # Attributes that are retrieved each request by default
+    FRESH_ATTRIBUTES = %w[delay pri state time-left]
+
+    # Attributes that return cached values by default
+    CACHED_ATTRIBUTES = %w[age buries kicks releases reserves timeouts ttr tube]
+
+    # All attributes available via a job's stats
+    STATS_ATTRIBUTES = (CACHED_ATTRIBUTES + FRESH_ATTRIBUTES).sort!
+
+    # Attributes that should be included in a Hash representation of a job
+    HASH_ATTRIBUTES = (STATS_ATTRIBUTES + %w[body connection id]).sort!
 
     STATS_ATTRIBUTES.each do |method_name|
-      define_method method_name do |force_refresh = false|
+      force = FRESH_ATTRIBUTES.include?(method_name)
+      define_method method_name.gsub(/-/, '_') do |force_refresh = force|
         return stats(force_refresh)[method_name]
       end
     end
@@ -18,24 +27,14 @@ module StalkClimber
     end
 
 
-    # Returns the connection provided by the job data given to the initialize method
-    def connection
-      return @connection
-    end
-
-
     # Deletes the job from beanstalk. If the job is not found it is assumed that it
     # has already been otherwise deleted.
     def delete
-      return true if @status == 'DELETED'
-      begin
-        @connection.transmit("delete #{id}")
-      rescue Beaneater::NotFoundError
-      end
+      result = super
       @status = 'DELETED'
       @stats = nil
       @body = nil
-      return true
+      return result
     end
 
 
@@ -45,13 +44,7 @@ module StalkClimber
     # the job, the peek command could return a much larger response. Rather than waste
     # the trip to the server, stats are updated each time the method is called.
     def exists?
-      return false if @status == 'DELETED'
-      begin
-        stats(:force_refresh)
-        return true
-      rescue Beaneater::NotFoundError
-        return false
-      end
+      return @status == 'DELETED' ? false : super
     end
 
 
@@ -65,8 +58,8 @@ module StalkClimber
     # Put provides only the ID of the job and as such yields the least informed instance. Both a
     # peek and stats-job call may be required to retrieve anything but the ID of the instance
     #
-    # Peek provides the ID and body of the job. A stats-job call may be required to access anything
-    # but the ID or body of the job.
+    # Peek and reserve provide the ID and body of the job. A stats-job call may be required to
+    # access anything but the ID or body of the job.
     #
     # Stats-job provides the most information about the job, but lacks the crtical component of the
     # job body. As such, a peek call would be required to access the body of the job.
@@ -75,7 +68,7 @@ module StalkClimber
       when 'INSERTED' # put
         @id = job_data[:id].to_i
         @body = @stats = nil
-      when 'FOUND' # peek
+      when 'FOUND', 'RESERVED' # peek, reserve
         @id = job_data[:id].to_i
         @body = job_data[:body]
         @stats = nil
@@ -88,23 +81,32 @@ module StalkClimber
       end
       @status = job_data[:status]
       @connection = job_data[:connection]
+      # Don't set @reserved to force lookup each time to handle job TTR expiration
     end
 
 
     # Returns or retrieves stats for the job. Optionally, a retrieve may be forced
     # by passing a non-false value for +force_refresh+
-    def stats(force_refresh = false)
-      return @stats unless @stats.nil? || force_refresh
-      @stats = connection.transmit("stats-job #{id}")[:body]
-      @stats.delete('id')
-      return @stats
+    def stats(force_refresh = true)
+      if @stats.nil? || force_refresh
+        @stats = connection.transmit("stats-job #{id}")[:body]
+      end
+      return Beaneater::StatStruct.from_hash(@stats)
     end
 
 
     # Returns a hash of all job attributes
     def to_h
-      return Hash[HASH_ATTRIBUTES.map { |attr| [attr, send(attr) ] } ]
+      stats
+      return Hash[HASH_ATTRIBUTES.map { |attr| [attr, @stats[attr] || send(attr)] } ]
     end
+
+
+    # Returns string representation of job
+    def to_s
+      "#<StalkClimber::Job id=#{id} body=#{body.inspect}>"
+    end
+    alias :inspect :to_s
 
 
     # :method: age
