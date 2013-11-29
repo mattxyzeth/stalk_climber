@@ -33,5 +33,12 @@ module StalkClimber
       return Hash[connection_pairs]
     end
 
+
+    # Return string representation of climber
+    def to_s
+      return "#<StalkClimber::Job beanstalk_addresses=#{beanstalk_addresses.inspect} test_tube=#{test_tube.inspect}>"
+    end
+    alias :inspect :to_s
+
   end
 end
