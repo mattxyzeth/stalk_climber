@@ -2,12 +2,25 @@ module StalkClimber
   class Connection < Beaneater::Connection
 
     include BreakableEnumerator
+
+    # Default tube used when no custom tube in use
     DEFAULT_TUBE = 'stalk_climber'
+
+    # Transmission used to probe state of Beanstalkd. Created with lowest
+    # possible priority and delay to reduce possibility of interference.
     PROBE_TRANSMISSION = "put 4294967295 0 300 2\r\n{}"
 
-    attr_reader :max_climbed_job_id, :min_climbed_job_id, :test_tube
+    # Last known maximum job id on the Beanstalkd server
+    attr_reader :max_climbed_job_id
+    # Last known existing minimum job id on the Beanstalkd server
+    attr_reader :min_climbed_job_id
+    # Tube to use when probing the Beanstalkd server for information
+    attr_reader :test_tube
 
 
+    # :call-seq:
+    #   cached_jobs() => Hash
+    #
     # Returns or creates a Hash used for caching jobs by ID
     def cached_jobs
       return @cached_jobs ||= {}
@@ -22,12 +35,20 @@ module StalkClimber
     end
 
 
+    # :call-seq:
+    #   each_job() => Enumerator
+    #   each_job {|job| block }
     # Interface for job enumerator/enumeration in descending ID order. Returns an instance of
     # Job for each existing job on the beanstalk server. Jobs are enumerated in three phases. Jobs
     # between max_job_id and the max_climbed_job_id are pulled from beanstalk, cached, and yielded.
     # Jobs that have already been cached are yielded if they still exist, otherwise they are deleted
     # from the job cache. Finally, jobs between min_climbed_job_id and 1 are pulled from beanstalk,
     # cached, and yielded.
+    #
+    #   connection = Connection.new('localhost:11300')
+    #   connection.each_job do |job|
+    #     job.delete
+    #   end
     def each_job
       return job_enumerator unless block_given?
       return breakable_enumerator(job_enumerator, &Proc.new)

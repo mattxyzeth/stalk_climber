@@ -3,7 +3,11 @@ module StalkClimber
 
     class InvalidURIScheme < RuntimeError; end
 
-    attr_reader :addresses, :test_tube
+    # Addresses the pool is connected to
+    attr_reader :addresses
+
+    # Test tube used when probing Beanstalk server for information
+    attr_reader :test_tube
 
     # Constructs a Beaneater::Pool from a less strict URL
     # +url+ can be a string i.e 'localhost:11300' or an array of addresses.
@@ -16,7 +20,10 @@ module StalkClimber
 
     protected
 
-    # Parses the given url into a collection of beanstalk addresses
+    # :call-seq:
+    #   parse_addresses(addresses) => String
+    #
+    # Parses the given urls into a collection of beanstalk addresses
     def parse_addresses(addresses)
       return if addresses.empty?
       uris = addresses.is_a?(Array) ? addresses.dup : addresses.split(/[\s,]+/)
