@@ -7,14 +7,12 @@ rvm:
   - rbx
 
 before_install:
-  - sudo apt-get update -qq
-  - sudo apt-get install -qq beanstalkd
-  - sudo sed -i 's/#START=yes/START=yes/' /etc/default/beanstalkd
-  - sudo service beanstalkd start
-  - cat /etc/init.d/beanstalkd | sed 's/NAME=beanstalkd/NAME=beanstalkd2/' | sudo tee /etc/init.d/beanstalkd2 2>&1>/dev/null
-  - cat /etc/default/beanstalkd | sed 's/11300/11301/' | sudo tee /etc/default/beanstalkd2 2>&1>/dev/null
-  - sudo chmod +x /etc/init.d/beanstalkd2
-  - sudo service beanstalkd2 start
+  - curl -L https://github.com/kr/beanstalkd/archive/v1.9.tar.gz | tar xz -C /tmp
+  - cd /tmp/beanstalkd-1.9/
+  - make
+  - ./beanstalkd &
+  - ./beanstalkd -p 11301 &
+  - cd $TRAVIS_BUILD_DIR
 
 env:
   - BEANSTALK_ADDRESSES='beanstalk://localhost:11300,beanstalk://localhost:11301'
