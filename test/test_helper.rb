@@ -9,6 +9,7 @@ require 'mocha/setup'
 require 'minitest/autorun'
 require 'minitest/should'
 require 'stalk_climber'
+require 'securerandom'
 
 BEANSTALK_ADDRESS = ENV['BEANSTALK_ADDRESS'] || 'beanstalk://localhost'
 BEANSTALK_ADDRESSES = ENV['BEANSTALK_ADDRESSES'] || BEANSTALK_ADDRESS

@@ -52,4 +52,16 @@ class ClimberTest < StalkClimber::TestCase
 
   end
 
+
+  context '#tubes' do
+
+    should 'delegate to connection_pool for tubes' do
+      climber = StalkClimber::Climber.new(BEANSTALK_ADDRESSES, 'test_tube')
+      connection_pool = climber.connection_pool
+      connection_pool.expects(:tubes).once
+      climber.tubes
+    end
+
+  end
+
 end

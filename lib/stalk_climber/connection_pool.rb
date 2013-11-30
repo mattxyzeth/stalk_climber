@@ -18,6 +18,11 @@ module StalkClimber
     end
 
 
+    def tubes
+      @tubes ||= StalkClimber::Tubes.new(self)
+    end
+
+
     protected
 
     # :call-seq:

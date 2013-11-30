@@ -36,7 +36,7 @@ class ConnectionTest < StalkClimber::TestCase
   context '#job_enumerator' do
 
     should 'be some kind of enumerable' do
-      assert @connection.job_enumerator.kind_of?(Enumerable)
+      assert_kind_of Enumerable, @connection.job_enumerator
     end
 
   end

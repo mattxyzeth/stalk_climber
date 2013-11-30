@@ -1,6 +1,9 @@
 module StalkClimber
   class Climber
-    include RUBY_VERSION >= '2.0.0' ? LazyEnumerable : Enumerable
+
+    extend Forwardable
+
+    def_delegator :connection_pool, :tubes
 
     # Collection of beanstalk_addresses the pool is connected to
     attr_accessor :beanstalk_addresses
