@@ -10,13 +10,15 @@ module StalkClimber
     # All attributes available via a job's stats
     STATS_ATTRIBUTES = (CACHED_ATTRIBUTES + FRESH_ATTRIBUTES).sort!
 
-    # Attributes that should be included in a Hash representation of a job
-    HASH_ATTRIBUTES = (STATS_ATTRIBUTES + %w[body connection id]).sort!
+    # Lookup table of which method to call to retrieve each stat
+    STATS_METHODS = Hash[
+      STATS_ATTRIBUTES.zip(STATS_ATTRIBUTES.map {|stat| stat.gsub(/-/, '_')})
+    ]
 
-    STATS_ATTRIBUTES.each do |method_name|
-      force = FRESH_ATTRIBUTES.include?(method_name)
-      define_method method_name.gsub(/-/, '_') do |force_refresh = force|
-        return stats(force_refresh)[method_name]
+    STATS_METHODS.each_pair do |stat, method_name|
+      force = FRESH_ATTRIBUTES.include?(stat)
+      define_method method_name do |force_refresh = force|
+        return stats(force_refresh).send(method_name)
       end
     end
 
@@ -104,8 +106,8 @@ module StalkClimber
         @body = job_data[:body]
         @stats = nil
       when 'OK' # stats-job
-        @stats = job_data[:body].dup
-        @id = @stats.delete('id').to_i
+        @stats = Beaneater::StatStruct.from_hash(job_data[:body])
+        @id = @stats.id.to_i
         @body = nil
       else
         raise RuntimeError, "Unexpected job status: #{job_data[:status]}"
@@ -127,9 +129,9 @@ module StalkClimber
     #     #=> #<Beaneater::StatStruct id=2523, tube="stalk_climber", state="ready", pri=0, age=25, delay=0, ttr=120, time_left=0, file=0, reserves=0, timeouts=0, releases=0, buries=0, kicks=0>
     def stats(force_refresh = true)
       if @stats.nil? || force_refresh
-        @stats = connection.transmit("stats-job #{id}")[:body]
+        @stats = super()
       end
-      return Beaneater::StatStruct.from_hash(@stats)
+      return @stats
     end
 
 
@@ -143,7 +145,9 @@ module StalkClimber
     #     #=> {"age"=>144, "body"=>"Work to be done", "buries"=>0, "connection"=>#<Beaneater::Connection host="localhost" port=11300>, "delay"=>0, "id"=>2523, "kicks"=>0, "pri"=>0, "releases"=>0, "reserves"=>0, "state"=>"ready", "time-left"=>0, "timeouts"=>0, "ttr"=>120, "tube"=>"stalk_climber"}
     def to_h
       stats
-      return Hash[HASH_ATTRIBUTES.map { |attr| [attr, @stats[attr] || send(attr)] } ]
+      stats_pairs = STATS_METHODS.map { |stat, method_name| [stat, stats(false)[method_name]]}
+      stats_pairs.concat([['body', body], ['connection', connection], ['id', id]]).sort_by!(&:first)
+      return Hash[stats_pairs]
     end
 
 

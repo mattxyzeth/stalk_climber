@@ -156,7 +156,7 @@ class Job < StalkClimber::TestCase
       }
       job = StalkClimber::Job.new(stats_response)
       StalkClimber::Job::CACHED_ATTRIBUTES.each do |method_name|
-        assert_equal stats_body[method_name], job.send(method_name), "Expected #{stats_body[method_name.to_sym]} for #{method_name}, got #{job.send(method_name)}"
+        assert_equal stats_body[method_name], job.send(method_name), "Expected #{stats_body[method_name]} for #{method_name}, got #{job.send(method_name)}"
       end
     end
 
@@ -255,8 +255,7 @@ class Job < StalkClimber::TestCase
       job = StalkClimber::Job.new(stats_response)
       job.instance_variable_set(:@body, job_body)
       job.connection.expects(:transmit).once.returns(stats_response)
-      expected_hash = Hash[stats_body.map { |k, v| [k, v] }]
-      assert_equal expected_hash, job.to_h
+      assert_equal stats_body, job.to_h
     end
 
   end
