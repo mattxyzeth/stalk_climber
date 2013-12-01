@@ -30,7 +30,7 @@ class TubesTest < StalkClimber::TestCase
     end
 
 
-    should 'iterate over all tubes in the pool' do
+    should 'iterate over all tubes in the pool yielding StalkClimber::Tube' do
       @test_tubes = []
       @climber.connection_pool.connections.each do |connection|
         2.times do
@@ -41,6 +41,7 @@ class TubesTest < StalkClimber::TestCase
 
       assert_equal @climber.connection_pool.connections.length * 2, @test_tubes.length
       @tubes.each do |tube|
+        assert_kind_of StalkClimber::Tube, tube
         @test_tubes.delete(tube.name)
       end
       assert_equal [], @test_tubes

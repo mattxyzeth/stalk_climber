@@ -8,6 +8,17 @@ module StalkClimber
 
 
     # :call-seq:
+    #   all() => Array[StalkClimber::Tube]
+    #
+    # List of all known beanstalk tubes in the connection pool.
+    # Adapted with minor modification from Beaneater::Tubes#all
+    def all
+      return transmit_to_all('list-tubes', :merge => true)[:body].map do |tube_name|
+        StalkClimber::Tube.new(self.pool, tube_name)
+      end
+    end
+
+    # :call-seq:
     #   each() => Enumerator
     #   each {|tube| block }
     #
