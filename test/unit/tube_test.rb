@@ -26,6 +26,25 @@ class TubeTest < StalkClimber::TestCase
   end
 
 
+  context 'exists?' do
+
+    should 'return false if the tube no longer exists' do
+      assert @tube.exists?
+      @climber.connection_pool.transmit_to_all("ignore #{@tube_name}")
+      refute @tube.exists?
+    end
+
+
+    should 'return true if the tube exists' do
+      @climber.connection_pool.transmit_to_all("ignore #{@tube_name}")
+      refute @tube.exists?
+      @climber.connection_pool.transmit_to_all("watch #{@tube_name}")
+      assert @tube.exists?
+    end
+
+  end
+
+
   context '#to_h' do
 
     should 'return the expected hash' do

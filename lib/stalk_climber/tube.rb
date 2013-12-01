@@ -25,6 +25,23 @@ module StalkClimber
 
 
     # :call-seq:
+    #   exists?() => Boolean
+    #
+    # Determines if a tube exists by retrieving stats for the tube. If Beaneater
+    # can't find the tube then it oes not exist and false is returned. If stats
+    # are retrieved successfully then true is returned. The stats command is used
+    # because it will return a response of near constant size, whereas, depending
+    # on the environment, list-tubes could return a much larger response.
+    # Additionally, updated stats information is usually more valuable than a list
+    # of tubes that is immediately discarded.
+    def exists?
+      return !stats.nil?
+    rescue Beaneater::NotFoundError
+      return false
+    end
+
+
+    # :call-seq:
     #   pause_time(force_refresh = false) => Integer
     #
     # Returns pause stat which indicates the duration the tube is currently
