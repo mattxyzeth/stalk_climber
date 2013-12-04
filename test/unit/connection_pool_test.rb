@@ -43,6 +43,14 @@ class ConnectionPoolTest < StalkClimber::TestCase
     end
 
 
+    should 'support multiple URL formats' do
+      connection_pool = StalkClimber::ConnectionPool.new('127.0.0.1,0.0.0.0:11301,beanstalk://localhost:11300')
+      connections = connection_pool.connections
+      assert_equal 3, connections.size
+      assert_equal ['127.0.0.1:11300','0.0.0.0:11301', 'localhost:11300'], connections.map(&:address)
+    end
+
+
     should 'support using a custom test tube' do
       connection_pool = StalkClimber::ConnectionPool.new('beanstalk://localhost', 'test_tube')
       assert_equal 'test_tube', connection_pool.test_tube
