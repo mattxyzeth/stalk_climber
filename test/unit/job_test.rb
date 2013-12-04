@@ -47,13 +47,30 @@ class Job < StalkClimber::TestCase
   context '#delete' do
 
     should 'delete the job' do
-      assert @job.delete
+      assert_equal 'DELETED', @job.delete[:status]
       assert_raises Beaneater::NotFoundError do
         @connection.transmit("peek #{@job.id}")
       end
       refute @job.instance_variable_get(:@body)
       refute @job.instance_variable_get(:@stats)
       assert_equal 'DELETED', @job.instance_variable_get(:@status)
+    end
+
+
+    should 'not clear job instance variables if delete fails' do
+      client = Beaneater::Connection.new('localhost:11300')
+      tube_name = SecureRandom.uuid
+      client.transmit("use #{tube_name}")
+      client.transmit("watch #{tube_name}")
+      client.transmit('ignore default')
+      job = client.transmit(StalkClimber::Connection::PROBE_TRANSMISSION)
+      @job = StalkClimber::Job.new(@connection.transmit("stats-job #{job[:id]}"))
+      client.transmit('reserve')
+      assert_raises Beaneater::NotFoundError do
+        @job.delete
+      end
+      assert @job.instance_variable_get(:@stats), 'Expected stats instance variable to still exist after failed deletion'
+      client.transmit("delete #{job[:id]}")
     end
 
   end

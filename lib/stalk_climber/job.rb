@@ -40,7 +40,8 @@ module StalkClimber
     # :call-seq:
     #   delete() => Hash{Symbol => String,Integer}
     #
-    # Deletes the job from beanstalk. Returns the Beanstalkd response for the command.
+    # Tries to delete the job from beanstalk. Returns the Beanstalkd response for the command.
+    # Raises Beaneater::NotFoundError if the job could not be found.
     #
     #   job = StalkClimber::Job.new(connection.transmit('reserve'))
     #   job.delete
