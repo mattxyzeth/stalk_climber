@@ -33,7 +33,7 @@ class ConnectionPoolTest < StalkClimber::TestCase
     should 'support a single connection url passed as a string' do
       connection_pool = StalkClimber::ConnectionPool.new('beanstalk://localhost')
       assert_kind_of StalkClimber::ConnectionPool, connection_pool
-      assert_kind_of Beaneater::Pool, connection_pool
+      assert_kind_of Beaneater, connection_pool
     end
 
 

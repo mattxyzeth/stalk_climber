@@ -3,7 +3,7 @@ require 'test_helper'
 class BeaneaterJobTest < StalkClimber::TestCase
 
   setup do
-    @pool  = Beaneater::Pool.new(['localhost'])
+    @pool  = Beaneater.new(['localhost'])
     @tube  = @pool.tubes.find 'tube'
   end
 

@@ -1,5 +1,5 @@
 module StalkClimber
-  class ConnectionPool < Beaneater::Pool
+  class ConnectionPool < Beaneater
 
     class InvalidURIScheme < RuntimeError; end
 
